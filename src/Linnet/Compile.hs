@@ -17,6 +17,7 @@ import           Control.Exception          (SomeException)
 import           Control.Monad.Trans.Reader (ReaderT (..))
 import           Data.Data                  (Proxy, Typeable)
 import           Linnet.Endpoint
+import           Linnet.Input
 import           Linnet.Internal.Coproduct
 import           Linnet.Internal.HList
 import           Linnet.Output              (outputToResponse)

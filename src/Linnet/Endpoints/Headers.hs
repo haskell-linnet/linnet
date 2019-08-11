@@ -13,8 +13,10 @@ import qualified Data.CaseInsensitive  as CI
 import           Linnet.Decode
 import           Linnet.Endpoint
 import           Linnet.Errors
+import           Linnet.Input
 import           Linnet.Output         (Output, badRequest, ok)
 import           Network.Wai           (requestHeaders)
+import Control.Monad.Catch (MonadThrow, throwM)
 
 --required :: forall a m. (DecodeEntity a, Applicative m) => B.ByteString -> Endpoint m a
 --required =
@@ -23,7 +25,7 @@ import           Network.Wai           (requestHeaders)
 -- * Headers is not presented in the request
 -- * There was a header decoding error
 header ::
-     forall a m. (DecodeEntity a, Applicative m)
+     forall a m. (DecodeEntity a, MonadThrow m)
   => B.ByteString
   -> Endpoint m a
 header name =
@@ -35,10 +37,10 @@ header name =
                 case maybeHeader of
                   Just val ->
                     case decodeEntity @a val of
-                      Left err -> badRequest $ EntityNotParsed {notParsedEntityName = name, entityParsingError = err}
-                      Right v -> ok v
-                  _ -> badRequest $ MissingEntity name
-           in Matched {matchedReminder = input, matchedOutput = pure output}
+                      Left err -> throwM $ EntityNotParsed {notParsedEntityName = name, entityParsingError = err}
+                      Right v -> return $ ok v
+                  _ -> throwM $ MissingEntity name
+           in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "header " ++ C8.unpack name
     }
 
@@ -46,7 +48,7 @@ header name =
 -- | Always matches, but may fail with error in case:
 -- * There was a header decoding error
 headerMaybe ::
-     forall a m. (DecodeEntity a, Applicative m)
+     forall a m. (DecodeEntity a, MonadThrow m)
   => B.ByteString
   -> Endpoint m (Maybe a)
 headerMaybe name =
@@ -58,9 +60,9 @@ headerMaybe name =
                 case maybeHeader of
                   Just val ->
                     case decodeEntity @a val of
-                      Left err -> badRequest $ EntityNotParsed {notParsedEntityName = name, entityParsingError = err}
-                      Right v -> ok $ Just v
-                  _ -> ok Nothing
-           in Matched {matchedReminder = input, matchedOutput = pure output}
+                      Left err -> throwM $ EntityNotParsed {notParsedEntityName = name, entityParsingError = err}
+                      Right v -> return $ ok (Just v)
+                  _ -> return $ ok Nothing
+           in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "headerMaybe " ++ C8.unpack name
     }

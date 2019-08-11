@@ -8,12 +8,14 @@ module Linnet.Endpoints.Cookies
   , cookieMaybe
   ) where
 
+import           Control.Monad.Catch   (MonadThrow, throwM)
 import qualified Data.ByteString       as B
 import qualified Data.ByteString.Char8 as C8
 import qualified Data.CaseInsensitive  as CI
 import           Linnet.Decode
 import           Linnet.Endpoint
 import           Linnet.Errors
+import           Linnet.Input
 import           Linnet.Output
 import           Network.Wai           (requestHeaders)
 
@@ -31,7 +33,7 @@ findCookie name cookies =
 -- * Cookie is not presented in the request
 -- * There was a cookie decoding error
 cookie ::
-     forall a m. (DecodeEntity a, Applicative m)
+     forall a m. (DecodeEntity a, MonadThrow m)
   => B.ByteString
   -> Endpoint m a
 cookie name =
@@ -43,10 +45,10 @@ cookie name =
                 case maybeCookie of
                   Just val ->
                     case decodeEntity @a val of
-                      Left err -> badRequest $ EntityNotParsed {notParsedEntityName = name, entityParsingError = err}
-                      Right v -> ok v
-                  _ -> badRequest $ MissingEntity name
-           in Matched {matchedReminder = input, matchedOutput = pure output}
+                      Left err -> throwM $ EntityNotParsed {notParsedEntityName = name, entityParsingError = err}
+                      Right v -> return $ ok v
+                  _ -> throwM $ MissingEntity name
+           in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "cookie " ++ C8.unpack name
     }
 
@@ -54,7 +56,7 @@ cookie name =
 -- | Always matches, but may fail with error in case:
 -- * There was a cookie decoding error
 cookieMaybe ::
-     forall a m. (DecodeEntity a, Applicative m)
+     forall a m. (DecodeEntity a, MonadThrow m)
   => B.ByteString
   -> Endpoint m (Maybe a)
 cookieMaybe name =
@@ -66,9 +68,9 @@ cookieMaybe name =
                 case maybeCookie of
                   Just val ->
                     case decodeEntity @a val of
-                      Left err -> badRequest $ EntityNotParsed {notParsedEntityName = name, entityParsingError = err}
-                      Right v -> ok $ Just v
-                  _ -> ok Nothing
-           in Matched {matchedReminder = input, matchedOutput = pure output}
+                      Left err -> throwM $ EntityNotParsed {notParsedEntityName = name, entityParsingError = err}
+                      Right v -> return $ ok (Just v)
+                  _ -> return $ ok Nothing
+           in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "cookieMaybe " ++ C8.unpack name
     }
