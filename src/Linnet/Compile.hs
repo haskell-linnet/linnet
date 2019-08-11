@@ -14,15 +14,18 @@ module Linnet.Compile
 
 import           Control.Arrow              (Kleisli (..))
 import           Control.Exception          (SomeException)
+import           Control.Monad.Catch        (MonadCatch)
 import           Control.Monad.Trans.Reader (ReaderT (..))
 import           Data.Data                  (Proxy, Typeable)
 import           Linnet.Endpoint
+import           Linnet.Errors              (LinnetError)
 import           Linnet.Input
 import           Linnet.Internal.Coproduct
 import           Linnet.Internal.HList
-import           Linnet.Output              (outputToResponse)
+import           Linnet.Output              (Output (..), outputToResponse,
+                                             payloadError)
 import           Linnet.ToResponse          (ToResponse)
-import           Network.HTTP.Types         (status404)
+import           Network.HTTP.Types         (badRequest400, status404)
 import           Network.Wai                (Request, Response, pathInfo,
                                              responseLBS)
 
@@ -32,15 +35,19 @@ class Compile cts m es where
 instance (Monad m) => Compile CNil m (HList '[]) where
   compile _ = Kleisli $ const notFoundResponse
 
-instance (Typeable ct, ToResponse ct a, ToResponse ct SomeException, Compile cts m (HList es), Monad m) =>
+instance (Typeable ct, ToResponse ct a, ToResponse ct SomeException, Compile cts m (HList es), MonadCatch m) =>
          Compile (Coproduct (Proxy ct) cts) m (HList (Endpoint m a ': es)) where
   compile (ea ::: es) =
     Kleisli
       (\req ->
          let input = Input {reminder = pathInfo req, request = req}
-          in case runEndpoint ea input of
+             handler = respond400
+          in case runEndpoint (handle handler ea) input of
                Matched _ mo -> outputToResponse @a @ct <$> mo
                NotMatched   -> runKleisli (compile @cts es) req)
 
 notFoundResponse :: (Applicative m) => m Response
 notFoundResponse = pure $ responseLBS status404 [] mempty
+
+respond400 :: (Applicative m) => LinnetError -> m (Output a)
+respond400 err = pure $ payloadError badRequest400 err
