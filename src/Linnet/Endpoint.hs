@@ -10,15 +10,15 @@
 module Linnet.Endpoint
   ( EndpointResult(..)
   , Endpoint(..)
-  , Input(..)
   , isMatched
   , maybeReminder
-  , constant
   , lift
   , liftOutputM
   , mapM'
   , mapOutput
   , mapOutputM
+  , handle
+  , handleAll
   , transformOutput
   , transform
   , (~>)
@@ -26,12 +26,13 @@ module Linnet.Endpoint
   , productWith
   , (//)
   , (|+|)
-  , coproduct
   , root
   , zero
   ) where
 
 import           Control.Applicative       (Alternative (..))
+import           Control.Exception         (Exception, SomeException)
+import qualified Control.Monad.Catch       as MC
 import           Control.Monad.IO.Class    (MonadIO, liftIO)
 import qualified Data.ByteString           as B
 import qualified Data.ByteString.Char8     as C8
@@ -39,7 +40,8 @@ import qualified Data.ByteString.Lazy      as BL
 import qualified Data.CaseInsensitive      as CI
 import           Data.Data                 (Typeable)
 import           Data.Either               (partitionEithers)
-import           Data.List.NonEmpty        (NonEmpty (..), nonEmpty)
+import           Data.List.NonEmpty        (NonEmpty ((:|)), (<|))
+import qualified Data.List.NonEmpty        as NonEmpty
 import           Data.Maybe                (maybeToList)
 import           Data.Proxy                (Proxy (..))
 import qualified Data.Text                 as T
@@ -48,6 +50,7 @@ import           Linnet.ContentTypes       (ApplicationJson, TextPlain)
 import           Linnet.Decode             (Decode (..), DecodeEntity (..),
                                             DecodePath (..))
 import           Linnet.Errors             (LinnetError (..))
+import           Linnet.Input
 import           Linnet.Internal.Coproduct
 import           Linnet.Internal.HList
 import           Linnet.Output
@@ -64,14 +67,6 @@ infixl 0 ~>>
 infixr 2 //
 
 infixl 2 |+|
-
--- | Container for the reminder of the request path and request itself
-data Input =
-  Input
-    { reminder :: [T.Text]
-    , request  :: Request
-    }
-  deriving (Show)
 
 -- | Result of returned by 'Endpoint' that could be either:
 --
@@ -117,8 +112,7 @@ instance (Functor m) => Functor (Endpoint m) where
   fmap f e = Endpoint {runEndpoint = fmap f . runEndpoint e, toString = toString e}
 
 instance (Monad m) => Applicative (Endpoint m) where
-  pure = constant
-  (<*>) f fa = productWith f fa (\fn a -> fn a)
+  pure a = Endpoint {runEndpoint = \i -> Matched i $ pure (ok a), toString = "const"}
 
 instance (Monad m) => Alternative (Endpoint m) where
   empty = Endpoint {runEndpoint = const NotMatched, toString = "empty"}
@@ -177,6 +171,28 @@ transform fn ea =
             NotMatched -> NotMatched
     }
 
+-- | Handle exception in monad @m@ of Endpoint result using provided function that returns new 'Output'
+handle :: (MC.MonadCatch m, Exception e) => (e -> m (Output a)) -> Endpoint m a -> Endpoint m a
+handle fn = transformOutput $ MC.handle fn
+
+-- | Handle all exceptions in monad @m@ of Endpoint result
+handleAll :: (MC.MonadCatch m) => (SomeException -> m (Output a)) -> Endpoint m a -> Endpoint m a
+handleAll fn = transformOutput $ MC.handleAll fn
+
+-- | Lift an exception of type @e@ into 'Either'
+try :: (MC.MonadCatch m, Exception e) => Endpoint m a -> Endpoint m (Either e a)
+try ea =
+  ea
+    { runEndpoint =
+        \input ->
+          let traverseEither :: Either e (Output a) -> Output (Either e a)
+              traverseEither (Left e)    = ok $ Left e
+              traverseEither (Right out) = Right <$> out
+           in case runEndpoint ea input of
+                Matched remA out -> Matched {matchedReminder = remA, matchedOutput = traverseEither <$> MC.try out}
+                NotMatched -> NotMatched
+    }
+
 -- | Inversed alias for mapOutputM
 (~>) :: (Monad m) => Endpoint m a -> (a -> m (Output b)) -> Endpoint m b
 (~>) ea fn = mapOutputM fn ea
@@ -185,10 +201,6 @@ transform fn ea =
 -- over a function of arity N equal to N elements of HList
 (~>>) :: (Monad m, FnToProduct fn ls (m (Output b))) => Endpoint m (HList ls) -> fn -> Endpoint m b
 (~>>) ea fn = mapOutputM (fromFunction fn) ea
-
--- | Create 'Endpoint' from the constant value @a@ that always matches
-constant :: (Applicative m) => a -> Endpoint m a
-constant a = Endpoint {runEndpoint = \i -> Matched i $ pure (ok a), toString = "const"}
 
 -- | Lift monadic value @m a@ into 'Endpoint' that always matches
 lift :: (Functor m) => m a -> Endpoint m a
@@ -200,7 +212,12 @@ liftOutputM m = Endpoint {runEndpoint = \i -> Matched i m, toString = "liftOutpu
 
 -- | Create product of two 'Endpoint's that sequentially match a request.
 -- | If some of endpoints doesn't match a request, the final result is also non-matching
-productWith :: Monad m => Endpoint m a -> Endpoint m b -> (a -> b -> c) -> Endpoint m c
+productWith ::
+     forall m a b c. MC.MonadCatch m
+  => Endpoint m a
+  -> Endpoint m b
+  -> (a -> b -> c)
+  -> Endpoint m c
 productWith ea eb f =
   ea
     { runEndpoint =
@@ -210,42 +227,42 @@ productWith ea eb f =
               case runEndpoint eb aRem of
                 Matched bRem bOutM ->
                   let out = do
-                        oa <- aOutM
-                        ob <- bOutM
-                        return $ oa >>= \a -> fmap (f a) ob
+                        oa <- MC.try aOutM
+                        ob <- MC.try bOutM
+                        product_ oa ob
                    in Matched bRem out
                 NotMatched -> NotMatched
             NotMatched -> NotMatched
     }
+  where
+    product_ :: Either LinnetError (Output a) -> Either LinnetError (Output b) -> m (Output c)
+    product_ a b =
+      case (a, b) of
+        (Right oa, Right ob) -> pure $ oa >>= \a -> fmap (f a) ob
+        (Left a, Left b)     -> MC.throwM $ a <> b
+        (Left a, _)          -> MC.throwM a
+        (_, Left b)          -> MC.throwM b
 
 -- | Create product of two 'Endpoint's where values are merged into 'HList'
-(//) :: (Monad m, AdjoinHList (a ': b ': '[]) out) => Endpoint m a -> Endpoint m b -> Endpoint m (HList out)
+(//) :: (MC.MonadCatch m, AdjoinHList (a ': b ': '[]) out) => Endpoint m a -> Endpoint m b -> Endpoint m (HList out)
 (//) ea eb =
   Endpoint
     { runEndpoint = runEndpoint $ productWith ea eb (\a b -> adjoin (a ::: b ::: HNil))
     , toString = toString ea ++ " // " ++ toString eb
     }
 
--- | Alias for 'coproduct'
-(|+|) ::
-     forall m a b out. (Monad m, AdjoinCoproduct (Coproduct a (Coproduct b CNil)) out)
-  => Endpoint m a
-  -> Endpoint m b
-  -> Endpoint m out
-(|+|) = coproduct
-
--- | Create coproduct 'Endpoint' of two endpoints, adjoining the values into @Coproduct a (Coproduct b CNil)@
+-- | Create new 'Endpoint' of two endpoints, adjoining values into 'Coproduct'
 -- During request resolution the following logic is applied:
 --
 --    * If none of endpoints match, resulting endpoint is also non-matching
 --
 --    * If both endpoints match, the more specific one is selected (with shorter reminder)
-coproduct ::
-     forall m a b out. (Monad m, AdjoinCoproduct (Coproduct a (Coproduct b CNil)) out)
+(|+|) ::
+     forall m a b out. (MC.MonadCatch m, AdjoinCoproduct (Coproduct a (Coproduct b CNil)) out)
   => Endpoint m a
   -> Endpoint m b
   -> Endpoint m out
-coproduct ea eb = fmap left ea <|> fmap right eb
+(|+|) ea eb = fmap left ea <|> fmap right eb
   where
     left :: a -> out
     left a = adjoinCoproduct @(Coproduct a (Coproduct b CNil)) $ Inl a

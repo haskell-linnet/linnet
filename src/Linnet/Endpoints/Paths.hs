@@ -16,6 +16,7 @@ import           Data.Maybe            (maybeToList)
 import qualified Data.Text             as T
 import           Linnet.Decode
 import           Linnet.Endpoint
+import           Linnet.Input
 import           Linnet.Internal.HList
 import           Linnet.Output         (ok)
 

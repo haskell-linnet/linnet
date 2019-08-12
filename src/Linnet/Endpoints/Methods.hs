@@ -11,6 +11,7 @@ module Linnet.Endpoints.Methods
   ) where
 
 import           Linnet.Endpoint
+import           Linnet.Input
 import           Network.HTTP.Types
 import           Network.Wai        (requestMethod)
 

@@ -83,6 +83,12 @@ instance Show (HList '[]) where
 instance (Show a, Show (HList as)) => Show (HList (a ': as)) where
   show (a ::: as) = show a ++ " ::: " ++ show as
 
+instance Eq (HList '[]) where
+  (==) HNil HNil = True
+
+instance (Eq a, Eq (HList as)) => Eq (HList (a ': as)) where
+  (==) (a ::: as) (a' ::: as') = a == a' && as == as'
+
 class FnToProduct fn ls out | fn ls -> out, ls out -> fn where
   fromFunction :: fn -> HList ls -> out
 
