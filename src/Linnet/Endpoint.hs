@@ -40,7 +40,8 @@ import qualified Data.ByteString.Lazy      as BL
 import qualified Data.CaseInsensitive      as CI
 import           Data.Data                 (Typeable)
 import           Data.Either               (partitionEithers)
-import           Data.List.NonEmpty        (NonEmpty (..), nonEmpty)
+import           Data.List.NonEmpty        (NonEmpty ((:|)), (<|))
+import qualified Data.List.NonEmpty        as NonEmpty
 import           Data.Maybe                (maybeToList)
 import           Data.Proxy                (Proxy (..))
 import qualified Data.Text                 as T
@@ -112,7 +113,6 @@ instance (Functor m) => Functor (Endpoint m) where
 
 instance (Monad m) => Applicative (Endpoint m) where
   pure a = Endpoint {runEndpoint = \i -> Matched i $ pure (ok a), toString = "const"}
-  (<*>) f fa = productWith f fa (\fn a -> fn a)
 
 instance (Monad m) => Alternative (Endpoint m) where
   empty = Endpoint {runEndpoint = const NotMatched, toString = "empty"}
@@ -212,7 +212,12 @@ liftOutputM m = Endpoint {runEndpoint = \i -> Matched i m, toString = "liftOutpu
 
 -- | Create product of two 'Endpoint's that sequentially match a request.
 -- | If some of endpoints doesn't match a request, the final result is also non-matching
-productWith :: Monad m => Endpoint m a -> Endpoint m b -> (a -> b -> c) -> Endpoint m c
+productWith ::
+     forall m a b c. MC.MonadCatch m
+  => Endpoint m a
+  -> Endpoint m b
+  -> (a -> b -> c)
+  -> Endpoint m c
 productWith ea eb f =
   ea
     { runEndpoint =
@@ -222,25 +227,38 @@ productWith ea eb f =
               case runEndpoint eb aRem of
                 Matched bRem bOutM ->
                   let out = do
-                        oa <- aOutM
-                        ob <- bOutM
-                        return $ oa >>= \a -> fmap (f a) ob
+                        oa <- MC.try aOutM
+                        ob <- MC.try bOutM
+                        product_ oa ob
                    in Matched bRem out
                 NotMatched -> NotMatched
             NotMatched -> NotMatched
     }
+  where
+    product_ :: Either LinnetError (Output a) -> Either LinnetError (Output b) -> m (Output c)
+    product_ a b =
+      case (a, b) of
+        (Right oa, Right ob) -> pure $ oa >>= \a -> fmap (f a) ob
+        (Left a, Left b)     -> MC.throwM $ a <> b
+        (Left a, _)          -> MC.throwM a
+        (_, Left b)          -> MC.throwM b
 
 -- | Create product of two 'Endpoint's where values are merged into 'HList'
-(//) :: (Monad m, AdjoinHList (a ': b ': '[]) out) => Endpoint m a -> Endpoint m b -> Endpoint m (HList out)
+(//) :: (MC.MonadCatch m, AdjoinHList (a ': b ': '[]) out) => Endpoint m a -> Endpoint m b -> Endpoint m (HList out)
 (//) ea eb =
   Endpoint
     { runEndpoint = runEndpoint $ productWith ea eb (\a b -> adjoin (a ::: b ::: HNil))
     , toString = toString ea ++ " // " ++ toString eb
     }
 
--- | Alias for 'coproduct'
+-- | Create new 'Endpoint' of two endpoints, adjoining values into 'Coproduct'
+-- During request resolution the following logic is applied:
+--
+--    * If none of endpoints match, resulting endpoint is also non-matching
+--
+--    * If both endpoints match, the more specific one is selected (with shorter reminder)
 (|+|) ::
-     forall m a b out. (Monad m, AdjoinCoproduct (Coproduct a (Coproduct b CNil)) out)
+     forall m a b out. (MC.MonadCatch m, AdjoinCoproduct (Coproduct a (Coproduct b CNil)) out)
   => Endpoint m a
   -> Endpoint m b
   -> Endpoint m out

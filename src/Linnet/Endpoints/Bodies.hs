@@ -33,7 +33,7 @@ decodeBody ::
 decodeBody payload =
   case decode @ct @a payload of
     Right a -> pure $ ok a
-    Left e  -> throwM $ DecodeEntityError Body e
+    Left e  -> throwM $ EntityNotParsed Body e
 
 -- | Endpoint that tries to decode body of request into some type @a@ using corresponding 'Decode' instance
 -- Always matches, but may fail with error in case:

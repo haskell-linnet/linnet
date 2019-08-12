@@ -52,7 +52,7 @@ class DecodeEntity a where
   decodeEntity :: Entity -> B.ByteString -> Either LinnetError a
   default decodeEntity :: (BC.FromByteString a) =>
     Entity -> B.ByteString -> Either LinnetError a
-  decodeEntity entity = left (DecodeEntityError entity . DecodeError . BC.toByteString') . BC.runParser BC.parser
+  decodeEntity entity = left (EntityNotParsed entity . DecodeError . BC.toByteString') . BC.runParser BC.parser
 
 instance DecodeEntity B.ByteString
 

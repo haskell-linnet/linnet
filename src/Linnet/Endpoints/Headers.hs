@@ -37,7 +37,7 @@ header name =
                 case maybeHeader of
                   Just val ->
                     case decodeEntity entity val of
-                      Left err -> throwM $ EntityNotParsed {notParsedEntity = entity, entityParsingError = err}
+                      Left err -> throwM err
                       Right v -> return $ ok v
                   _ -> throwM $ MissingEntity entity
            in Matched {matchedReminder = input, matchedOutput = output}
@@ -62,7 +62,7 @@ headerMaybe name =
                 case maybeHeader of
                   Just val ->
                     case decodeEntity entity val of
-                      Left err -> throwM $ EntityNotParsed {notParsedEntity = entity, entityParsingError = err}
+                      Left err -> throwM err
                       Right v -> return $ ok (Just v)
                   _ -> return $ ok Nothing
            in Matched {matchedReminder = input, matchedOutput = output}

@@ -21,11 +21,13 @@ import qualified Data.ByteString.Char8                as C8
 import qualified Data.ByteString.Lazy                 as BL
 import qualified Data.CaseInsensitive                 as CI
 import           Data.Function                        ((&))
-import           Data.List.NonEmpty                   (NonEmpty, toList)
+import           Data.List.NonEmpty                   (NonEmpty(..), toList)
 import qualified Data.Text                            as T
 import qualified Data.Text.Encoding                   as TE
 import           Linnet                               (Decode (..), TextPlain)
 import           Linnet.Endpoint
+import           Linnet.Endpoints.Entity
+import           Linnet.Errors
 import           Linnet.Input
 import           Linnet.Output
 import qualified Network.HTTP.Types                   as HTTP
@@ -211,6 +213,27 @@ genEndpoint = do
       , toString = "arbitrary"
       }
 
+genEntity :: Gen Entity
+genEntity = oneof [genParamEntity, genHeaderEntity, genCookieEntity, genBodyEntity]
+  where
+    genParamEntity = Param <$> arbitrary
+    genHeaderEntity = Header <$> arbitrary
+    genCookieEntity = Cookie <$> arbitrary
+    genBodyEntity = pure Body
+
+genLinnetError :: Gen LinnetError
+genLinnetError = oneof [genDecodeError, genMissingEntity, genEntityNotParsed]
+  where
+    genDecodeError = DecodeError <$> arbitrary
+    genMissingEntity = MissingEntity <$> genEntity
+    genEntityNotParsed = EntityNotParsed <$> genEntity <*> genLinnetError
+    genLinnetErrors = LinnetErrors <$>
+      do
+        h <- genLinnetError
+        t <- listOf genLinnetError
+        return $ h :| t 
+    
+
 newtype TestException =
   TestException String
   deriving (Show, Eq)
@@ -231,6 +254,10 @@ instance CoArbitrary Input where
     coarbitrary (reminder input) gen & coarbitrary ((requestMethod . request) input) &
     coarbitrary ((requestHeaders . request) input) &
     coarbitrary ((queryString . request) input)
+
+instance Arbitrary LinnetError where
+  arbitrary = genLinnetError
+  
 
 instance Arbitrary a => Arbitrary (Output a) where
   arbitrary = genOutput
