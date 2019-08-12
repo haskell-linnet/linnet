@@ -96,9 +96,37 @@ instance (Functor m) => Functor (EndpointResult m) where
   fmap f (Matched r m) = Matched r $ (fmap . fmap) f m
   fmap _ NotMatched    = NotMatched
 
--- | Basic data type that represents operations over HTTP request.
--- It abstracts away details of HTTP communication and is supposed to be middleware between
--- business logic of application and HTTP server.
+-- | Basic Linnet data type that abstracts away operations over HTTP communication.
+-- While WAI Application has type of @Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived@,
+-- it's practical to treat web applications as functions of @Request -> BusinessLogic -> IO Response@ where @BusinessLogic@
+-- is usually a function of @a -> m b@ where @a@ and @b@ are data to be decoded from the request / encoded to response, @m@
+-- is some monad, and this is the most interesting part of an application.
+--
+-- Endpoint's purpose is exactly to abstract details of encoding and decoding, along with routing and the rest, and provide
+-- simple interface to encapsulate @BusinessLogic@ into a final web application.
+--
+-- Business logic is encoded as transformation in @fmap@, @mapOutput@, @mapOutputM@, @mapM@ and the like.
+-- Usual way to transform endpoint is to use '~>' and '~>>' operators:
+--
+-- > get (path @Text) ~> (\segment -> return $ ok segment)
+-- Here, '~>' is just an inverted alias for `mapOutputM` function. Often, endpoint is a product of multiple endpoints,
+-- and here '~>>' proves to be very handy:
+--
+-- > get (p' "sum" // path @Int // path @Int) ~>> (\i1 i2 -> return $ ok (i1 + i2) )
+--
+-- The trick is that '//' defines sequential @AND@ combination of endpoints that is represented as endpoint of 'HList', so
+-- instead of dealing with heterogeneous list, it's possible to use '~>>' instead and map with a function of multiple arguments.
+--
+-- Endpoints are also composable in terms of @OR@ logic with '|+|' operator that is useful for routing:
+--
+-- > getUsers = get (p' "users") ~>> (ok <$> fetchUsers)
+-- > newUser = post (p' "users" // jsonBody @User) ~>> (\user -> ok <$> createUser user)
+-- > usersApi = getUsers |+| newUser
+--
+-- An endpoint might be converted into WAI @Application@ using 'Linnet.Bootstrap.bootstrap' and @\@TypeApplications@ language pragma:
+--
+-- > main = run 9000 app
+-- >        where app = bootstrap @TextPlain usersApi & compile & toApp id
 data Endpoint (m :: * -> *) a =
   Endpoint
     { runEndpoint :: Input -> EndpointResult m a
@@ -193,12 +221,13 @@ try ea =
                 NotMatched -> NotMatched
     }
 
--- | Inversed alias for mapOutputM
+-- | Inversed alias for 'mapOutputM'
 (~>) :: (Monad m) => Endpoint m a -> (a -> m (Output b)) -> Endpoint m b
 (~>) ea fn = mapOutputM fn ea
 
--- | Advanced version of '(~>)' operator that allows to map @Endpoint m (HList ls)@
--- over a function of arity N equal to N elements of HList
+-- | Advanced version of '~>' operator that allows to map @Endpoint m (HList ls)@
+-- over a function of arity N equal to N elements of HList.
+-- General rule of thumb when to use this operator is whenever there is an 'HList' on the left side.
 (~>>) :: (Monad m, FnToProduct fn ls (m (Output b))) => Endpoint m (HList ls) -> fn -> Endpoint m b
 (~>>) ea fn = mapOutputM (fromFunction fn) ea
 
@@ -243,7 +272,8 @@ productWith ea eb f =
         (Left a, _)          -> MC.throwM a
         (_, Left b)          -> MC.throwM b
 
--- | Create product of two 'Endpoint's where values are merged into 'HList'
+-- | Create product of two 'Endpoint's that sequentially match a request and values are adjoined into 'HList'.
+-- If some of endpoints doesn't match a request, the final result is also non-matching
 (//) :: (MC.MonadCatch m, AdjoinHList (a ': b ': '[]) out) => Endpoint m a -> Endpoint m b -> Endpoint m (HList out)
 (//) ea eb =
   Endpoint

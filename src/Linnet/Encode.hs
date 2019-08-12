@@ -18,6 +18,9 @@ import           Data.Text.Lazy.Encoding as TLE
 import           GHC.Base                (Symbol)
 import           Linnet.ContentTypes
 
+-- | Encoding of some type @a@ into payload of HTTP response
+-- Phantom type @ct@ guarantees that compiler checks support of encoding of some @a@ into content of given @Content-Type@
+-- by looking for specific @Encode@ instance.
 class Encode (ct :: Symbol) a where
   encode :: a -> BL.ByteString
 

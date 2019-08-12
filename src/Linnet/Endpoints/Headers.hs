@@ -21,8 +21,10 @@ import           Network.Wai             (requestHeaders)
 --required :: forall a m. (DecodeEntity a, Applicative m) => B.ByteString -> Endpoint m a
 --required =
 -- | Endpoint that tries to decode header @name@ from a request.
--- | Always matches, but may fail with error in case:
+-- Always matches, but may throw an exception in case:
+--
 -- * Headers is not presented in the request
+--
 -- * There was a header decoding error
 header ::
      forall a m. (DecodeEntity a, MonadThrow m)
@@ -38,7 +40,7 @@ header name =
                   Just val ->
                     case decodeEntity entity val of
                       Left err -> throwM err
-                      Right v -> return $ ok v
+                      Right v  -> return $ ok v
                   _ -> throwM $ MissingEntity entity
            in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "header " ++ C8.unpack name
@@ -47,7 +49,8 @@ header name =
     entity = Header name
 
 -- | Endpoint that tries to decode header @name@ from a request.
--- | Always matches, but may fail with error in case:
+-- Always matches, but may throw an exception in case:
+--
 -- * There was a header decoding error
 headerMaybe ::
      forall a m. (DecodeEntity a, MonadThrow m)
@@ -63,7 +66,7 @@ headerMaybe name =
                   Just val ->
                     case decodeEntity entity val of
                       Left err -> throwM err
-                      Right v -> return $ ok (Just v)
+                      Right v  -> return $ ok (Just v)
                   _ -> return $ ok Nothing
            in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "headerMaybe " ++ C8.unpack name

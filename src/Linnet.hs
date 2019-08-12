@@ -4,23 +4,60 @@ Description: Lightweight HTTP library on top of WAI
 Copyright: (c) Sergey Kolbasov, 2019
 License: Apache License 2.0
 
-Linnet [ˈlɪnɪt] is a library that provides combinators for building HTTP API on top of <http://hackage.haskell.org/package/wai WAI>.
-Library design is heavily inspired by Scala <https://github.com/finagle/finch Finch> made by V. Kostyukov.
+Linnet [ˈlɪnɪt] is a lightweight Haskell library to build HTTP API on top of <http://hackage.haskell.org/package/wai WAI>.
+Library design is heavily inspired by Scala <https://github.com/finagle/finch Finch>.
 
-Main module exposes only subset of available functions and operators.
 -}
 module Linnet
-  ( ApplicationJson
-  , TextHtml
-  , TextPlain
-  , Endpoint(..)
-  , Encode(..)
-  , Decode(..)
-  , Output(..)
+  (
+  -- * Hello world
+  -- $helloWorld
+  -- * Endpoint and core combinators
+    Endpoint(..)
   , (~>)
   , (~>>)
   , (//)
   , (|+|)
+  -- ** Method endpoints
+  , get
+  , post
+  , put
+  , patch
+  , delete
+  , head'
+  , trace'
+  , connect
+  , options
+  -- ** Path matching endpoints
+  , path
+  , pathAny
+  , pathConst
+  , p'
+  , pathEmpty
+  , paths
+  -- ** Query parameters endpoints
+  , param
+  , paramMaybe
+  , params
+  , paramsNel
+  -- ** Request body endpoints
+  , body
+  , bodyMaybe
+  , textBody
+  , textBodyMaybe
+  , jsonBody
+  , jsonBodyMaybe
+  -- ** Cookie endpoints
+  , cookie
+  , cookieMaybe
+  -- ** Header endpoints
+  , header
+  , headerMaybe
+  -- ** Response encoding and request decoding
+  , Encode(..)
+  , Decode(..)
+  -- ** Endpoint output
+  , Output(..)
   , ok
   , created
   , accepted
@@ -44,39 +81,15 @@ module Linnet
   , badGateway
   , serviceUnavailable
   , gatewayTimeout
-  , cookie
-  , cookieMaybe
-  , header
-  , headerMaybe
-  , get
-  , post
-  , put
-  , patch
-  , delete
-  , head'
-  , trace'
-  , connect
-  , options
-  , param
-  , paramMaybe
-  , params
-  , paramsNel
-  , path
-  , pathAny
-  , pathConst
-  , p'
-  , pathEmpty
-  , paths
-  , body
-  , bodyMaybe
-  , textBody
-  , textBodyMaybe
-  , jsonBody
-  , jsonBodyMaybe
+  -- * Running an endpoint
   , bootstrap
   , serve
   , compile
   , toApp
+  -- * Content-Type literals
+  , ApplicationJson
+  , TextHtml
+  , TextPlain
   ) where
 
 import           Linnet.Bootstrap
@@ -86,3 +99,38 @@ import           Linnet.Encode
 import           Linnet.Endpoint
 import           Linnet.Endpoints
 import           Linnet.Output
+
+-- $helloWorld
+-- Hello @name@ example using warp server:
+--
+--  > {-# LANGUAGE FlexibleInstances      #-}
+--  > {-# LANGUAGE MultiParamTypeClasses  #-}
+--  > {-# LANGUAGE OverloadedStrings      #-}
+--  > {-# LANGUAGE TypeApplications       #-}
+--  > {-# LANGUAGE TypeSynonymInstances   #-}
+--  >
+--  > import Control.Exception (SomeException)
+--  > import Data.Function ((&))
+--  > import Data.Text (Text, append)
+--  > import Linnet
+--  > import Network.Wai.Handler.Warp (run)
+--  >
+--  >
+--  > -- It's necessary to define encoding of exceptions for content-type "text/plain". Here it returns no content
+--  > instance Encode TextPlain SomeException where
+--  >  encode _ = mempty
+--  >
+--  > helloWorld = get(p' "hello" // path @Text) ~>> (\name -> return $ ok ("Hello, " `append` name))
+--  >
+--  > main :: IO ()
+--  > main = run 9000 app
+--  > where
+--  >   app = bootstrap @TextPlain helloWorld & compile & toApp id
+--
+-- Now try to call your server with @curl@ command:
+--
+-- > curl -v http://localhost:9000/hello/linnet
+--
+-- __Main module exposes only subset of available functions and operators to keep application namespace clean.__
+--
+-- Explore corresponding modules for additional functionality.

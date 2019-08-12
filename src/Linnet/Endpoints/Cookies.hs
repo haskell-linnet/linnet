@@ -29,8 +29,10 @@ findCookie name cookies =
        _      -> [])
 
 -- | Endpoint that tries to decode cookie @name@ from a request.
--- | Always matches, but may fail with error in case:
+-- Always matches, but may throw an exception in case:
+--
 -- * Cookie is not presented in the request
+--
 -- * There was a cookie decoding error
 cookie ::
      forall a m. (DecodeEntity a, MonadThrow m)
@@ -46,7 +48,7 @@ cookie name =
                   Just val ->
                     case decodeEntity entity val of
                       Left err -> throwM err
-                      Right v -> return $ ok v
+                      Right v  -> return $ ok v
                   _ -> throwM $ MissingEntity entity
            in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "cookie " ++ C8.unpack name
@@ -55,7 +57,8 @@ cookie name =
     entity = Cookie name
 
 -- | Endpoint that tries to decode cookie @name@ from a request.
--- | Always matches, but may fail with error in case:
+-- Always matches, but may throw an exception in case:
+--
 -- * There was a cookie decoding error
 cookieMaybe ::
      forall a m. (DecodeEntity a, MonadThrow m)
@@ -71,7 +74,7 @@ cookieMaybe name =
                   Just val ->
                     case decodeEntity entity val of
                       Left err -> throwM err
-                      Right v -> return $ ok (Just v)
+                      Right v  -> return $ ok (Just v)
                   _ -> return $ ok Nothing
            in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "cookieMaybe " ++ C8.unpack name
