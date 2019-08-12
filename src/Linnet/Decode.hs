@@ -24,6 +24,9 @@ import           GHC.Base                   (Symbol)
 import           Linnet.Endpoints.Entity    (Entity)
 import           Linnet.Errors
 
+-- | Decoding of HTTP request payload into some type @a@.
+-- Phantom type @ct@ guarantees that compiler checks support of decoding some @a@ from content of given @Content-Type@
+-- by looking for specific @Decode@ instance.
 class Decode (ct :: Symbol) a where
   decode :: BL.ByteString -> Either LinnetError a
 

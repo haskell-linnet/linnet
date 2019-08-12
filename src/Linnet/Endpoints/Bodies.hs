@@ -36,7 +36,7 @@ decodeBody payload =
     Left e  -> throwM $ EntityNotParsed Body e
 
 -- | Endpoint that tries to decode body of request into some type @a@ using corresponding 'Decode' instance
--- Always matches, but may fail with error in case:
+-- Always matches, but may throw an exception in case:
 --
 --    * Content length header was missing, chunked or equal to 0
 --
@@ -60,7 +60,7 @@ body =
     entity = Body
 
 -- | Endpoint that tries to decode body of request into some type @a@ using corresponding 'Decode' instance
--- Always matches, but may fail with error in case:
+-- Always matches, but may throw an exception in case:
 --
 --    * There was a body decoding error
 bodyMaybe ::
@@ -79,18 +79,18 @@ bodyMaybe =
     , toString = "bodyMaybe"
     }
 
--- | Alias for body @TextPlain
+-- | Alias for @body \@TextPlain@
 textBody :: (Decode TextPlain a, MonadIO m, MonadThrow m) => Endpoint m a
 textBody = body @TextPlain
 
--- | Alias for bodyMaybe @TextPlain
+-- | Alias for @bodyMaybe \@TextPlain@
 textBodyMaybe :: (Decode TextPlain a, MonadIO m, MonadThrow m) => Endpoint m (Maybe a)
 textBodyMaybe = bodyMaybe @TextPlain
 
--- | Alias for body @ApplicationJson
+-- | Alias for @body \@ApplicationJson@
 jsonBody :: (Decode ApplicationJson a, MonadIO m, MonadThrow m) => Endpoint m a
 jsonBody = body @ApplicationJson
 
--- | Alias for bodyMaybe @ApplicationJson
+-- | Alias for @bodyMaybe \@ApplicationJson@
 jsonBodyMaybe :: (Decode ApplicationJson a, MonadIO m, MonadThrow m) => Endpoint m (Maybe a)
 jsonBodyMaybe = bodyMaybe @ApplicationJson

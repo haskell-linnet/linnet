@@ -20,9 +20,11 @@ import           Linnet.Input
 import           Linnet.Internal.HList
 import           Linnet.Output         (ok)
 
--- | Endpoint that tries to decode head of the current path reminder into specific type
--- If path is empty, Endpoint is not matched
--- If decoding has failed, Endpoint is not matched
+-- | Endpoint that tries to decode head of the current path reminder into specific type. It consumes head of the reminder.
+--
+-- * If path is empty, Endpoint is not matched
+--
+-- * If decoding has failed, Endpoint is not matched
 path ::
      forall a m. (DecodePath a, Applicative m, Typeable a)
   => Endpoint m a
@@ -40,8 +42,11 @@ path =
     }
 
 -- | Endpoint that matches only if the head of current path reminder is equal to some given constant value.
--- If value matches the provided constant, saves the tail of the path as a reminder
--- Otherwise resulting endpoint is not matched
+-- It consumes head of the reminder.
+--
+-- * If value matches the provided constant, saves the tail of the path as a reminder
+--
+-- * Otherwise, resulting endpoint is not matched
 pathConst :: (Applicative m) => T.Text -> Endpoint m (HList '[])
 pathConst value =
   Endpoint

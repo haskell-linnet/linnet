@@ -22,8 +22,10 @@ import           Linnet.Output           (badRequest, ok)
 import           Network.Wai             (queryString)
 
 -- | Endpoint that tries to decode parameter @name@ from the request query string.
--- Always matches, but may fail with error in case:
+-- Always matches, but may throw an exception in case:
+--
 -- * Parameter is not presented in request query
+--
 -- * There was a parameter decoding error
 param ::
      forall a m. (DecodeEntity a, MonadThrow m)
@@ -48,7 +50,8 @@ param name =
     entity = Param name
 
 -- | Endpoint that tries to decode parameter @name@ from the request query string.
--- Always matches, but may fail with error in case:
+-- Always matches, but may throw an exception in case:
+--
 -- * There was a parameter decoding error
 paramMaybe ::
      forall a m. (DecodeEntity a, MonadThrow m)
@@ -64,7 +67,7 @@ paramMaybe name =
                   Just (Just val) ->
                     case decodeEntity entity val of
                       Left err -> throwM err
-                      Right v -> return $ ok (Just v)
+                      Right v  -> return $ ok (Just v)
                   _ -> return $ ok Nothing
            in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "paramMaybe " ++ C8.unpack name
@@ -73,7 +76,8 @@ paramMaybe name =
     entity = Param name
 
 -- | Endpoint that tries to decode all parameters @name@ from the request query string.
--- Always matches, but may fail with error in case:
+-- Always matches, but may throw an exception in case:
+--
 -- * There was a parameter decoding error of at least one parameter value
 params ::
      forall a m. (DecodeEntity a, MonadThrow m)
@@ -101,8 +105,10 @@ params name =
     entity = Param name
 
 -- | Endpoint that tries to decode all parameters @name@ from the request query string.
--- Always matches, but may fail with error in case:
+-- Always matches, but may throw an exception in case:
+--
 -- * There was a parameter decoding error of at least one parameter value
+--
 -- * All parameters are empty or missing in request query
 paramsNel ::
      forall a m. (DecodeEntity a, MonadThrow m)
