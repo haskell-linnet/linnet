@@ -102,7 +102,7 @@ paramsNel ::
      forall a m. (DecodeEntity a, MonadThrow m)
   => B.ByteString
   -> Endpoint m (NonEmpty a)
-paramsNel name = mapOutput toNel $ params @a name
+paramsNel name = mapOutputM toNel $ params @a name
   where
-    toNel []    = badRequest $ MissingEntity name
-    toNel (h:t) = ok $ h :| t
+    toNel []    = throwM $ MissingEntity name
+    toNel (h:t) = return $ ok (h :| t)

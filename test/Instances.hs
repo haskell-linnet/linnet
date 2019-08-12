@@ -1,12 +1,14 @@
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE NamedFieldPuns      #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
 
 module Instances
   ( compareEndpoints
+  , TestException(..)
   ) where
 
 import           Control.Applicative                  (empty)
@@ -16,11 +18,15 @@ import           Control.Exception                    (Exception,
 import           Control.Monad.Catch                  (MonadThrow, throwM)
 import qualified Data.ByteString                      as B
 import qualified Data.ByteString.Char8                as C8
+import qualified Data.ByteString.Lazy                 as BL
 import qualified Data.CaseInsensitive                 as CI
 import           Data.Function                        ((&))
 import           Data.List.NonEmpty                   (NonEmpty, toList)
 import qualified Data.Text                            as T
+import qualified Data.Text.Encoding                   as TE
+import           Linnet                               (Decode (..), TextPlain)
 import           Linnet.Endpoint
+import           Linnet.Input
 import           Linnet.Output
 import qualified Network.HTTP.Types                   as HTTP
 import           Network.Wai                          (Request, defaultRequest,
@@ -230,7 +236,7 @@ instance Arbitrary a => Arbitrary (Output a) where
   arbitrary = genOutput
 
 instance (Arbitrary a, MonadThrow m) => Arbitrary (Endpoint m a) where
-  arbitrary = genEndpoint
+  arbitrary = oneof [genEndpoint, genErrorEndpoint, genConstEndpoint, genEmptyEndpoint]
 
 instance (Eq a) => Eq (Payload a) where
   (==) (Payload a) (Payload b) = a == b
@@ -269,3 +275,6 @@ compareEndpoints :: (Eq (m (Output a))) => Endpoint m a -> Endpoint m a -> IO Bo
 compareEndpoints ea eb = do
   input <- head <$> sample' genInput
   compareEndpointResults (runEndpoint ea input) (runEndpoint eb input)
+
+instance Decode TextPlain T.Text where
+  decode = Right . TE.decodeUtf8 . BL.toStrict
