@@ -21,6 +21,7 @@ import           Data.Either.Combinators
 import qualified Data.Text                  as T
 import           Data.Text.Read             (decimal, double, rational, signed)
 import           GHC.Base                   (Symbol)
+import           Linnet.Endpoints.Entity    (Entity)
 import           Linnet.Errors
 
 class Decode (ct :: Symbol) a where
@@ -48,10 +49,10 @@ instance DecodePath Rational where
   decodePath t = rightToMaybe $ fst <$> signed rational t
 
 class DecodeEntity a where
-  decodeEntity :: B.ByteString -> Either LinnetError a
+  decodeEntity :: Entity -> B.ByteString -> Either LinnetError a
   default decodeEntity :: (BC.FromByteString a) =>
-    B.ByteString -> Either LinnetError a
-  decodeEntity = left (DecodeEntityError . BC.toByteString') . BC.runParser BC.parser
+    Entity -> B.ByteString -> Either LinnetError a
+  decodeEntity entity = left (DecodeEntityError entity . DecodeError . BC.toByteString') . BC.runParser BC.parser
 
 instance DecodeEntity B.ByteString
 
@@ -64,7 +65,7 @@ instance DecodeEntity Int
 instance DecodeEntity Double
 
 instance DecodeEntity Float where
-  decodeEntity = right realToFrac . decodeEntity @Double
+  decodeEntity entity = right realToFrac . decodeEntity @Double entity
 
 instance DecodeEntity Rational where
-  decodeEntity = right fromIntegral . decodeEntity @Integer
+  decodeEntity entity = right fromIntegral . decodeEntity @Integer entity

@@ -24,6 +24,7 @@ import           Debug.Trace             (trace)
 import           Instances
 import           Linnet
 import           Linnet.Endpoint
+import           Linnet.Endpoints.Entity
 import           Linnet.Errors
 import           Linnet.Input
 import           Linnet.Internal.HList
@@ -99,6 +100,10 @@ spec =
             ]
     it "always matches with identity instance" $
       property $ \(i :: Input) -> maybeReminder (runEndpoint (zero @Identity) i) == Just i
+    it "matches & consumes the entire input" $
+      property $ \(i :: Input) ->
+        let e = foldl (//) (zero @Identity) $ map p' (reminder i)
+         in maybeReminder (runEndpoint e i) == Just (i {reminder = []})
     it "shouldn't match if one of the endpoints has failed in (//) composition" $
       property $ \(i :: Input, s :: T.Text) -> isNothing (maybeReminder (runEndpoint (pathAny @Identity // p' s) i))
     it "matches if at least one of the endpoints succeed in alternative <|>" $
@@ -133,14 +138,13 @@ spec =
     it "throws MissingEntity if an item wasn't found" $ do
       let i = inputFromGet "/"
       let name = "test"
-      let exception = MissingEntity name
       let (endpoints, exceptions) =
             unzip
-              [ (param @T.Text name, exception)
-              , (T.intercalate ";" . toList <$> paramsNel @T.Text name, exception)
-              , (header @T.Text name, exception)
-              , (cookie @T.Text name, exception)
-              , (textBody @T.Text, MissingEntity "body")
+              [ (param @T.Text name, MissingEntity $ Param name)
+              , (T.intercalate ";" . toList <$> paramsNel @T.Text name, MissingEntity $ Param name)
+              , (header @T.Text name, MissingEntity $ Header name)
+              , (cookie @T.Text name, MissingEntity $ Cookie name)
+              , (textBody @T.Text, MissingEntity Body)
               ]
       results <- lefts <$> mapM (\e -> runEndpoint e i & resultOutputEither) endpoints
       map fromException results `shouldBe` Just <$> exceptions

@@ -1,6 +1,5 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
 
 module Linnet.Endpoints.Params
   ( param
@@ -9,17 +8,18 @@ module Linnet.Endpoints.Params
   , paramsNel
   ) where
 
-import           Control.Monad.Catch   (MonadThrow, throwM)
-import qualified Data.ByteString       as B
-import qualified Data.ByteString.Char8 as C8
-import           Data.Either           (partitionEithers)
-import           Data.List.NonEmpty    (NonEmpty (..), nonEmpty)
+import           Control.Monad.Catch     (MonadThrow, throwM)
+import qualified Data.ByteString         as B
+import qualified Data.ByteString.Char8   as C8
+import           Data.Either             (partitionEithers)
+import           Data.List.NonEmpty      (NonEmpty (..), nonEmpty)
 import           Linnet.Decode
 import           Linnet.Endpoint
+import           Linnet.Endpoints.Entity
 import           Linnet.Errors
 import           Linnet.Input
-import           Linnet.Output         (badRequest, ok)
-import           Network.Wai           (queryString)
+import           Linnet.Output           (badRequest, ok)
+import           Network.Wai             (queryString)
 
 -- | Endpoint that tries to decode parameter @name@ from the request query string.
 -- Always matches, but may fail with error in case:
@@ -37,13 +37,15 @@ param name =
               output =
                 case maybeParam of
                   Just (Just val) ->
-                    case decodeEntity @a val of
-                      Left err -> throwM $ EntityNotParsed {notParsedEntityName = name, entityParsingError = err}
+                    case decodeEntity entity val of
+                      Left err -> throwM $ EntityNotParsed {notParsedEntity = entity, entityParsingError = err}
                       Right v -> return $ ok v
-                  _ -> throwM $ MissingEntity name
+                  _ -> throwM $ MissingEntity entity
            in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "param " ++ C8.unpack name
     }
+  where
+    entity = Param name
 
 -- | Endpoint that tries to decode parameter @name@ from the request query string.
 -- Always matches, but may fail with error in case:
@@ -60,13 +62,15 @@ paramMaybe name =
               output =
                 case maybeParam of
                   Just (Just val) ->
-                    case decodeEntity @a val of
-                      Left err -> throwM $ EntityNotParsed {notParsedEntityName = name, entityParsingError = err}
+                    case decodeEntity entity val of
+                      Left err -> throwM $ EntityNotParsed {notParsedEntity = entity, entityParsingError = err}
                       Right v -> return $ ok (Just v)
                   _ -> return $ ok Nothing
            in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "paramMaybe " ++ C8.unpack name
     }
+  where
+    entity = Param name
 
 -- | Endpoint that tries to decode all parameters @name@ from the request query string.
 -- Always matches, but may fail with error in case:
@@ -85,7 +89,7 @@ params name =
                 (\case
                    (k, Just v) -> [(k, v)]
                    _ -> [])
-              (errors, values) = partitionEithers . map (decodeEntity @a . snd) $ ps
+              (errors, values) = partitionEithers . map (decodeEntity entity . snd) $ ps
               output =
                 case nonEmpty errors of
                   Just es -> throwM $ LinnetErrors es
@@ -93,6 +97,8 @@ params name =
            in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "params " ++ C8.unpack name
     }
+  where
+    entity = Param name
 
 -- | Endpoint that tries to decode all parameters @name@ from the request query string.
 -- Always matches, but may fail with error in case:
@@ -102,7 +108,7 @@ paramsNel ::
      forall a m. (DecodeEntity a, MonadThrow m)
   => B.ByteString
   -> Endpoint m (NonEmpty a)
-paramsNel name = mapOutputM toNel $ params @a name
+paramsNel name = mapOutputM toNel $ params name
   where
-    toNel []    = throwM $ MissingEntity name
+    toNel []    = throwM $ MissingEntity (Param name)
     toNel (h:t) = return $ ok (h :| t)

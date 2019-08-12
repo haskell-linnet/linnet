@@ -1,23 +1,23 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
 
 module Linnet.Endpoints.Cookies
   ( cookie
   , cookieMaybe
   ) where
 
-import           Control.Monad.Catch   (MonadThrow, throwM)
-import qualified Data.ByteString       as B
-import qualified Data.ByteString.Char8 as C8
-import qualified Data.CaseInsensitive  as CI
+import           Control.Monad.Catch     (MonadThrow, throwM)
+import qualified Data.ByteString         as B
+import qualified Data.ByteString.Char8   as C8
+import qualified Data.CaseInsensitive    as CI
 import           Linnet.Decode
 import           Linnet.Endpoint
+import           Linnet.Endpoints.Entity
 import           Linnet.Errors
 import           Linnet.Input
 import           Linnet.Output
-import           Network.Wai           (requestHeaders)
+import           Network.Wai             (requestHeaders)
 
 findCookie :: B.ByteString -> B.ByteString -> Maybe B.ByteString
 findCookie name cookies =
@@ -44,13 +44,15 @@ cookie name =
               output =
                 case maybeCookie of
                   Just val ->
-                    case decodeEntity @a val of
-                      Left err -> throwM $ EntityNotParsed {notParsedEntityName = name, entityParsingError = err}
+                    case decodeEntity entity val of
+                      Left err -> throwM $ EntityNotParsed {notParsedEntity = entity, entityParsingError = err}
                       Right v -> return $ ok v
-                  _ -> throwM $ MissingEntity name
+                  _ -> throwM $ MissingEntity entity
            in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "cookie " ++ C8.unpack name
     }
+  where
+    entity = Cookie name
 
 -- | Endpoint that tries to decode cookie @name@ from a request.
 -- | Always matches, but may fail with error in case:
@@ -67,10 +69,12 @@ cookieMaybe name =
               output =
                 case maybeCookie of
                   Just val ->
-                    case decodeEntity @a val of
-                      Left err -> throwM $ EntityNotParsed {notParsedEntityName = name, entityParsingError = err}
+                    case decodeEntity entity val of
+                      Left err -> throwM $ EntityNotParsed {notParsedEntity = entity, entityParsingError = err}
                       Right v -> return $ ok (Just v)
                   _ -> return $ ok Nothing
            in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "cookieMaybe " ++ C8.unpack name
     }
+  where
+    entity = Header name

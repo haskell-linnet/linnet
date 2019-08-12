@@ -1,22 +1,22 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
 
 module Linnet.Endpoints.Headers
   ( header
   , headerMaybe
   ) where
 
-import           Control.Arrow         (right)
-import qualified Data.ByteString       as B
-import qualified Data.ByteString.Char8 as C8
-import qualified Data.CaseInsensitive  as CI
+import           Control.Arrow           (right)
+import           Control.Monad.Catch     (MonadThrow, throwM)
+import qualified Data.ByteString         as B
+import qualified Data.ByteString.Char8   as C8
+import qualified Data.CaseInsensitive    as CI
 import           Linnet.Decode
 import           Linnet.Endpoint
+import           Linnet.Endpoints.Entity
 import           Linnet.Errors
 import           Linnet.Input
-import           Linnet.Output         (Output, badRequest, ok)
-import           Network.Wai           (requestHeaders)
-import Control.Monad.Catch (MonadThrow, throwM)
+import           Linnet.Output           (Output, badRequest, ok)
+import           Network.Wai             (requestHeaders)
 
 --required :: forall a m. (DecodeEntity a, Applicative m) => B.ByteString -> Endpoint m a
 --required =
@@ -36,13 +36,15 @@ header name =
               output =
                 case maybeHeader of
                   Just val ->
-                    case decodeEntity @a val of
-                      Left err -> throwM $ EntityNotParsed {notParsedEntityName = name, entityParsingError = err}
+                    case decodeEntity entity val of
+                      Left err -> throwM $ EntityNotParsed {notParsedEntity = entity, entityParsingError = err}
                       Right v -> return $ ok v
-                  _ -> throwM $ MissingEntity name
+                  _ -> throwM $ MissingEntity entity
            in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "header " ++ C8.unpack name
     }
+  where
+    entity = Header name
 
 -- | Endpoint that tries to decode header @name@ from a request.
 -- | Always matches, but may fail with error in case:
@@ -59,10 +61,12 @@ headerMaybe name =
               output =
                 case maybeHeader of
                   Just val ->
-                    case decodeEntity @a val of
-                      Left err -> throwM $ EntityNotParsed {notParsedEntityName = name, entityParsingError = err}
+                    case decodeEntity entity val of
+                      Left err -> throwM $ EntityNotParsed {notParsedEntity = entity, entityParsingError = err}
                       Right v -> return $ ok (Just v)
                   _ -> return $ ok Nothing
            in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "headerMaybe " ++ C8.unpack name
     }
+  where
+    entity = Header name

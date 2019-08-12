@@ -2,20 +2,22 @@ module Linnet.Errors
   ( LinnetError(..)
   ) where
 
-import           Control.Exception  (Exception)
-import qualified Data.ByteString    as B
-import           Data.List.NonEmpty (NonEmpty)
+import           Control.Exception       (Exception)
+import qualified Data.ByteString         as B
+import           Data.List.NonEmpty      (NonEmpty)
+import           Linnet.Endpoints.Entity
 
 data LinnetError
   = DecodeEntityError
-      { decodeEntityError :: B.ByteString
+      { nondecodableEntity :: Entity
+      , decodeEntityError  :: LinnetError
       }
   | MissingEntity
-      { missingEntityName :: B.ByteString
+      { missingEntity :: Entity
       }
   | EntityNotParsed
-      { notParsedEntityName :: B.ByteString
-      , entityParsingError  :: LinnetError
+      { notParsedEntity    :: Entity
+      , entityParsingError :: LinnetError
       }
   | LinnetErrors
       { linnetErrors :: NonEmpty LinnetError
