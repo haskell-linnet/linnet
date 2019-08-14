@@ -19,6 +19,7 @@ module Linnet.Endpoint
   , mapOutputM
   , handle
   , handleAll
+  , try
   , transformOutput
   , transform
   , (~>)
@@ -33,32 +34,13 @@ module Linnet.Endpoint
 import           Control.Applicative       (Alternative (..))
 import           Control.Exception         (Exception, SomeException)
 import qualified Control.Monad.Catch       as MC
-import           Control.Monad.IO.Class    (MonadIO, liftIO)
-import qualified Data.ByteString           as B
-import qualified Data.ByteString.Char8     as C8
-import qualified Data.ByteString.Lazy      as BL
-import qualified Data.CaseInsensitive      as CI
-import           Data.Data                 (Typeable)
-import           Data.Either               (partitionEithers)
-import           Data.List.NonEmpty        (NonEmpty ((:|)), (<|))
-import qualified Data.List.NonEmpty        as NonEmpty
-import           Data.Maybe                (maybeToList)
-import           Data.Proxy                (Proxy (..))
-import qualified Data.Text                 as T
-import           Data.Typeable             (typeRep)
-import           Linnet.ContentTypes       (ApplicationJson, TextPlain)
-import           Linnet.Decode             (Decode (..), DecodeEntity (..),
-                                            DecodePath (..))
+import           GHC.Base                  (liftA2)
 import           Linnet.Errors             (LinnetError (..))
 import           Linnet.Input
 import           Linnet.Internal.Coproduct
 import           Linnet.Internal.HList
 import           Linnet.Output
-import qualified Network.HTTP.Types        as N
-import           Network.Wai               (Request, RequestBodyLength (..),
-                                            lazyRequestBody, queryString,
-                                            requestBodyLength, requestHeaders,
-                                            requestMethod)
+import           Network.Wai               (Request)
 
 infixl 0 ~>
 
@@ -85,8 +67,8 @@ isMatched (Matched _ _) = True
 isMatched _             = False
 
 maybeReminder :: EndpointResult m a -> Maybe Input
-maybeReminder (Matched rem _) = Just rem
-maybeReminder _               = Nothing
+maybeReminder (Matched r _) = Just r
+maybeReminder _             = Nothing
 
 instance (Show (m (Output a))) => Show (EndpointResult m a) where
   show (Matched _ out) = "EndpointResult.Matched(" ++ show out ++ ")"
@@ -139,10 +121,11 @@ instance Show (Endpoint m a) where
 instance (Functor m) => Functor (Endpoint m) where
   fmap f e = Endpoint {runEndpoint = fmap f . runEndpoint e, toString = toString e}
 
-instance (Monad m) => Applicative (Endpoint m) where
+instance (MC.MonadCatch m) => Applicative (Endpoint m) where
   pure a = Endpoint {runEndpoint = \i -> Matched i $ pure (ok a), toString = "const"}
+  liftA2 fn fa fb = productWith fa fb fn
 
-instance (Monad m) => Alternative (Endpoint m) where
+instance (MC.MonadCatch m) => Alternative (Endpoint m) where
   empty = Endpoint {runEndpoint = const NotMatched, toString = "empty"}
   (<|>) ea eb =
     Endpoint
@@ -265,8 +248,8 @@ productWith ea eb f =
     }
   where
     product_ :: Either LinnetError (Output a) -> Either LinnetError (Output b) -> m (Output c)
-    product_ a b =
-      case (a, b) of
+    product_ eitherA eitherB =
+      case (eitherA, eitherB) of
         (Right oa, Right ob) -> pure $ oa >>= \a -> fmap (f a) ob
         (Left a, Left b)     -> MC.throwM $ a <> b
         (Left a, _)          -> MC.throwM a

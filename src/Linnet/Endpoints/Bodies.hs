@@ -35,12 +35,12 @@ decodeBody payload =
     Right a -> pure $ ok a
     Left e  -> throwM $ EntityNotParsed Body e
 
--- | Endpoint that tries to decode body of request into some type @a@ using corresponding 'Decode' instance
--- Always matches, but may throw an exception in case:
+-- | Endpoint that tries to decode body of request into some type @a@ using corresponding 'Decode' instance.
+-- Matches if body isn't chunked. May throw an exception in case:
 --
---    * Content length header was missing, chunked or equal to 0
+--  * Body is empty
 --
---    * There was a body decoding error
+--  * There was a body decoding error
 body ::
      forall ct a m. (Decode ct a, MonadIO m, MonadThrow m)
   => Endpoint m a
@@ -48,19 +48,19 @@ body =
   Endpoint
     { runEndpoint =
         \input ->
-          let mOut =
-                case (requestBodyLength . request) input of
-                  KnownLength 0 -> throwM $ MissingEntity Body
-                  ChunkedBody -> throwM $ MissingEntity Body
-                  KnownLength _ -> (liftIO . lazyRequestBody . request) input >>= decodeBody @ct @a
-           in Matched {matchedReminder = input, matchedOutput = mOut}
+          case (requestBodyLength . request) input of
+            ChunkedBody -> NotMatched
+            KnownLength 0 -> Matched {matchedReminder = input, matchedOutput = throwM $ MissingEntity Body}
+            KnownLength _ ->
+              Matched
+                { matchedReminder = input
+                , matchedOutput = (liftIO . lazyRequestBody . request) input >>= decodeBody @ct @a
+                }
     , toString = "body"
     }
-  where
-    entity = Body
 
--- | Endpoint that tries to decode body of request into some type @a@ using corresponding 'Decode' instance
--- Always matches, but may throw an exception in case:
+-- | Endpoint that tries to decode body of request into some type @a@ using corresponding 'Decode' instance.
+-- Matches if body isn't chunked. May throw an exception in case:
 --
 --    * There was a body decoding error
 bodyMaybe ::
@@ -70,12 +70,14 @@ bodyMaybe =
   Endpoint
     { runEndpoint =
         \input ->
-          let mOut =
-                case (requestBodyLength . request) input of
-                  KnownLength 0 -> pure $ ok Nothing
-                  ChunkedBody -> pure $ ok Nothing
-                  KnownLength _ -> (fmap . fmap) Just ((liftIO . lazyRequestBody . request) input >>= decodeBody @ct @a)
-           in Matched {matchedReminder = input, matchedOutput = mOut}
+          case (requestBodyLength . request) input of
+            ChunkedBody -> NotMatched
+            KnownLength 0 -> Matched {matchedReminder = input, matchedOutput = pure $ ok Nothing}
+            KnownLength _ ->
+              Matched
+                { matchedReminder = input
+                , matchedOutput = (fmap . fmap) Just ((liftIO . lazyRequestBody . request) input >>= decodeBody @ct @a)
+                }
     , toString = "bodyMaybe"
     }
 

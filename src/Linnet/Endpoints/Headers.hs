@@ -5,7 +5,6 @@ module Linnet.Endpoints.Headers
   , headerMaybe
   ) where
 
-import           Control.Arrow           (right)
 import           Control.Monad.Catch     (MonadThrow, throwM)
 import qualified Data.ByteString         as B
 import qualified Data.ByteString.Char8   as C8
@@ -15,7 +14,7 @@ import           Linnet.Endpoint
 import           Linnet.Endpoints.Entity
 import           Linnet.Errors
 import           Linnet.Input
-import           Linnet.Output           (Output, badRequest, ok)
+import           Linnet.Output           (ok)
 import           Network.Wai             (requestHeaders)
 
 --required :: forall a m. (DecodeEntity a, Applicative m) => B.ByteString -> Endpoint m a

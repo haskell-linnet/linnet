@@ -3,7 +3,6 @@ module Linnet.Endpoints.Entity
   ) where
 
 import qualified Data.ByteString as B
-import qualified Data.Text       as T
 
 data Entity
   = Param

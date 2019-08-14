@@ -17,6 +17,7 @@ import           Linnet.Endpoints.Entity
 import           Linnet.Errors
 import           Linnet.Input
 import           Linnet.Output
+import           Network.URI.Encode      (decodeByteString)
 import           Network.Wai             (requestHeaders)
 
 findCookie :: B.ByteString -> B.ByteString -> Maybe B.ByteString
@@ -25,7 +26,7 @@ findCookie name cookies =
   C8.split ';' cookies >>=
   (\pairs ->
      case C8.split '=' pairs of
-       [k, v] -> [(k, v)]
+       [k, v] -> [(k, decodeByteString v)]
        _      -> [])
 
 -- | Endpoint that tries to decode cookie @name@ from a request.

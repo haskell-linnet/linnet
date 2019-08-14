@@ -5,26 +5,35 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module Instances
-  ( compareEndpoints
-  , TestException(..)
+  ( TestException(..)
+  , Foo(..)
   ) where
 
 import           Control.Applicative                  (empty)
 import           Control.Exception                    (Exception,
                                                        SomeException (..),
-                                                       toException)
-import           Control.Monad.Catch                  (MonadThrow, throwM)
+                                                       catch, toException)
+import           Control.Monad.Catch                  (MonadCatch, MonadThrow,
+                                                       catchAll, throwM)
 import qualified Data.ByteString                      as B
+import           Data.ByteString.Builder              (toLazyByteString)
+import qualified Data.ByteString.Builder              as Builder
 import qualified Data.ByteString.Char8                as C8
+import           Data.ByteString.Conversion           (ToByteString (..))
 import qualified Data.ByteString.Lazy                 as BL
+import qualified Data.ByteString.Lazy.Char8           as C8L
 import qualified Data.CaseInsensitive                 as CI
 import           Data.Function                        ((&))
-import           Data.List.NonEmpty                   (NonEmpty(..), toList)
+import           Data.List.NonEmpty                   (NonEmpty (..), toList)
+import           Data.Maybe                           (listToMaybe)
 import qualified Data.Text                            as T
 import qualified Data.Text.Encoding                   as TE
-import           Linnet                               (Decode (..), TextPlain)
+import           GHC.IO                               (unsafePerformIO)
+import           Linnet                               (Decode (..), Encode (..),
+                                                       TextPlain, TextHtml)
 import           Linnet.Endpoint
 import           Linnet.Endpoints.Entity
 import           Linnet.Errors
@@ -37,6 +46,7 @@ import           Network.Wai                          (Request, defaultRequest,
                                                        requestHeaders,
                                                        requestMethod,
                                                        strictRequestBody)
+import           Network.Wai.Internal                 (Response (..))
 import           Test.QuickCheck                      (Arbitrary (..),
                                                        CoArbitrary (..), Gen,
                                                        NonEmptyList, choose,
@@ -75,9 +85,6 @@ genPath = do
   size <- choose (0, 20)
   vectorOf size $ oneof [suchThat arbitrary (/= T.empty), T.pack . show <$> arbitrary @Int, elements ["true", "false"]]
 
-genBody :: Gen B.ByteString
-genBody = arbitrary
-
 genMethod :: Gen B.ByteString
 genMethod =
   elements
@@ -98,13 +105,12 @@ genRequest = do
   cookie <- genCookie
   headers <- listOf genHeader
   params <- listOf genParam
-  body <- genBody
   method <- genMethod
   return
     defaultRequest
       { requestMethod = method
       , queryString = params
-      , requestBody = pure body
+      , requestBody = pure mempty
       , pathInfo = path
       , requestHeaders = cookie : headers
       }
@@ -193,23 +199,23 @@ genPayloadOutput = do
 genOutput :: (Arbitrary a) => Gen (Output a)
 genOutput = oneof [genPayloadOutput, genEmptyOutput, genFailureOutput]
 
-genEmptyEndpoint :: (Monad m) => Gen (Endpoint m a)
+genEmptyEndpoint :: (MonadCatch m) => Gen (Endpoint m a)
 genEmptyEndpoint = pure empty
 
-genConstEndpoint :: (Monad m, Arbitrary a) => Gen (Endpoint m a)
+genConstEndpoint :: (MonadCatch m, Arbitrary a) => Gen (Endpoint m a)
 genConstEndpoint = pure <$> arbitrary
 
 genErrorEndpoint :: (MonadThrow m) => Gen (Endpoint m a)
 genErrorEndpoint = lift . throwM . TestException <$> arbitrary
 
 genEndpoint ::
-     forall m a. (Arbitrary (Input -> a), Monad m)
+     forall m a. (Arbitrary (Input -> Output a), Monad m)
   => Gen (Endpoint m a)
 genEndpoint = do
-  f <- arbitrary @(Input -> a)
+  f <- arbitrary @(Input -> Output a)
   return $
     Endpoint
-      { runEndpoint = \input -> Matched {matchedReminder = input, matchedOutput = pure $ ok (f input)}
+      { runEndpoint = \input -> Matched {matchedReminder = input, matchedOutput = pure $ (f input)}
       , toString = "arbitrary"
       }
 
@@ -227,12 +233,11 @@ genLinnetError = oneof [genDecodeError, genMissingEntity, genEntityNotParsed]
     genDecodeError = DecodeError <$> arbitrary
     genMissingEntity = MissingEntity <$> genEntity
     genEntityNotParsed = EntityNotParsed <$> genEntity <*> genLinnetError
-    genLinnetErrors = LinnetErrors <$>
-      do
+    genLinnetErrors =
+      LinnetErrors <$> do
         h <- genLinnetError
         t <- listOf genLinnetError
-        return $ h :| t 
-    
+        return $ h :| t
 
 newtype TestException =
   TestException String
@@ -242,6 +247,9 @@ instance Exception TestException
 
 instance Arbitrary Request where
   arbitrary = genRequest
+
+instance Arbitrary Entity where
+  arbitrary = genEntity
 
 instance Arbitrary Input where
   arbitrary = genInput
@@ -257,12 +265,11 @@ instance CoArbitrary Input where
 
 instance Arbitrary LinnetError where
   arbitrary = genLinnetError
-  
 
 instance Arbitrary a => Arbitrary (Output a) where
   arbitrary = genOutput
 
-instance (Arbitrary a, MonadThrow m) => Arbitrary (Endpoint m a) where
+instance (Arbitrary a, MonadCatch m) => Arbitrary (Endpoint m a) where
   arbitrary = oneof [genEndpoint, genErrorEndpoint, genConstEndpoint, genEmptyEndpoint]
 
 instance (Eq a) => Eq (Payload a) where
@@ -275,33 +282,53 @@ instance (Eq a) => Eq (Output a) where
   (==) (Output sa pa ha) (Output sb pb hb) = sa == sb && pa == pb && ha == hb
 
 instance Eq Input where
-  (==) i i' = reminder i == reminder i' && (show . request) i == (show . request) i'
+  (==) i i' = reminder i == reminder i' && request i == request i'
 
 instance Eq SomeException where
   (==) e e' = show e == show e'
 
-compareRequests :: Request -> Request -> IO Bool
-compareRequests r r' = do
-  b <- strictRequestBody r
-  b' <- strictRequestBody r'
-  return $ (show r' == show r) && b == b'
+instance Eq Request where
+  (==) r r' = show r == show r'
 
-compareInputs :: Input -> Input -> IO Bool
-compareInputs i i' = do
-  r <- compareRequests (request i) (request i')
-  return $ (reminder i == reminder i') && r
+instance Eq (m (Output a)) => Eq (EndpointResult m a) where
+  (==) (Matched i m) (Matched i' m') = i == i' && m == m'
+  (==) NotMatched NotMatched         = True
+  (==) _ _                           = False
 
-compareEndpointResults :: Eq (m (Output a)) => EndpointResult m a -> EndpointResult m a -> IO Bool
-compareEndpointResults (Matched i m) (Matched i' m') = do
-  eqInputs <- compareInputs i i'
-  return $ (m == m) && eqInputs
-compareEndpointResults NotMatched NotMatched = pure True
-compareEndpointResults _ _ = pure False
-
-compareEndpoints :: (Eq (m (Output a))) => Endpoint m a -> Endpoint m a -> IO Bool
-compareEndpoints ea eb = do
-  input <- head <$> sample' genInput
-  compareEndpointResults (runEndpoint ea input) (runEndpoint eb input)
+instance Eq (m (Output a)) => Eq (Endpoint m a) where
+  (==) ea eb = runEndpoint ea input == runEndpoint eb input
+    where
+      input = head . unsafePerformIO . sample' $ genInput
 
 instance Decode TextPlain T.Text where
   decode = Right . TE.decodeUtf8 . BL.toStrict
+
+instance Eq a => Eq (IO a) where
+  (==) i i' = unsafePerformIO (tryAll i) == unsafePerformIO (tryAll i')
+    where
+      tryAll m = catchAll (fmap Right m) (pure . Left)
+
+instance Eq Response where
+  (==) (ResponseBuilder s hs b) (ResponseBuilder s' hs' b') =
+    s == s && hs == hs' && toLazyByteString b == toLazyByteString b'
+
+newtype Foo =
+  Foo
+    { x :: String
+    }
+  deriving (Show, Read, Eq)
+
+instance Arbitrary Foo where
+  arbitrary = Foo <$> arbitrary
+
+instance Decode TextPlain Foo where
+  decode bs =
+    case (reads . C8.unpack . BL.toStrict) bs of
+      [(foo, _)] -> Right foo
+      _          -> Left (DecodeError "Couldn't parse Foo")
+
+instance Encode ct SomeException where
+  encode = C8L.pack . show
+
+instance Encode TextHtml T.Text where
+  encode = BL.fromStrict . TE.encodeUtf8

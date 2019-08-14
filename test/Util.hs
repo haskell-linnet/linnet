@@ -6,12 +6,16 @@ module Util
   , resultOutputEither
   , resultOutputUnsafe
   , headOption
+  , checkLaws
   ) where
 
-import           Control.Exception   (Exception (..), SomeException (..))
+import           Control.Exception       (Exception (..), SomeException (..))
 import           Control.Monad.Catch
-import           Linnet.Endpoint     (EndpointResult (..))
+import           Linnet.Endpoint         (EndpointResult (..))
 import           Linnet.Output
+import           Test.Hspec              (Example (..), SpecWith, describe, it)
+import           Test.QuickCheck         (Property, property)
+import           Test.QuickCheck.Classes (Laws (..))
 
 headOption :: [a] -> Maybe a
 headOption []    = Nothing
@@ -36,3 +40,8 @@ resultOutputEither endpointResult =
     NotMatched -> pure $ Right Nothing
     Matched {matchedOutput = m} -> catchAll (fmap (Right . Just) m) (pure . Left)
 
+checkLaws :: String -> Laws -> SpecWith ()
+checkLaws name laws = describe (lawsTypeclass laws ++ " @" ++ name) properties
+  where
+    properties :: SpecWith ()
+    properties = mapM_ (uncurry it) (lawsProperties laws)

@@ -50,6 +50,7 @@ import           Linnet.ToResponse         (ToResponse (..))
 import           Network.HTTP.Types        (Header)
 import           Network.HTTP.Types.Status
 import           Network.Wai
+import GHC.TypeLits (KnownSymbol)
 
 -- | Output of 'Endpoint' that carries some 'Payload' @a@ together with response status and headers
 data Output a =
@@ -80,6 +81,9 @@ instance Applicative Output where
   pure = ok
   (<*>) (Output _ (Payload f) _) (Output status (Payload a) headers) =
     Output {outputStatus = status, outputPayload = Payload (f a), outputHeaders = headers}
+  (<*>) (Output status NoPayload headers) _ = Output status NoPayload headers
+  (<*>) (Output status (ErrorPayload e) headers) _ =
+    Output {outputStatus = status, outputPayload = ErrorPayload e, outputHeaders = headers}
   (<*>) _ (Output status NoPayload headers) =
     Output {outputStatus = status, outputPayload = NoPayload, outputHeaders = headers}
   (<*>) _ (Output status (ErrorPayload e) headers) =
@@ -221,13 +225,14 @@ payloadEmpty :: Status -> Output a
 payloadEmpty status = Output {outputStatus = status, outputPayload = NoPayload, outputHeaders = []}
 
 outputToResponse ::
-     forall a ct. (ToResponse ct a, ToResponse ct SomeException)
+     forall a ct. (KnownSymbol ct, ToResponse ct a, ToResponse ct SomeException)
   => Output a
   -> Response
 outputToResponse output =
   let response =
         case outputPayload output of
           Payload a      -> toResponse @ct a
-          NoPayload      -> responseLBS (outputStatus output) [] mempty
+          NoPayload      -> toResponse @ct ()
           ErrorPayload e -> toResponse @ct $ toException e
-   in mapResponseStatus (const (outputStatus output)) response
+   in
+    (mapResponseStatus (const (outputStatus output)) . mapResponseHeaders (++ outputHeaders output)) response

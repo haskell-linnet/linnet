@@ -18,7 +18,7 @@ import           Linnet.Endpoint
 import           Linnet.Endpoints.Entity
 import           Linnet.Errors
 import           Linnet.Input
-import           Linnet.Output           (badRequest, ok)
+import           Linnet.Output           (ok)
 import           Network.Wai             (queryString)
 
 -- | Endpoint that tries to decode parameter @name@ from the request query string.
@@ -40,8 +40,8 @@ param name =
                 case maybeParam of
                   Just (Just val) ->
                     case decodeEntity entity val of
-                      Left err -> throwM $ EntityNotParsed {notParsedEntity = entity, entityParsingError = err}
-                      Right v -> return $ ok v
+                      Left err -> throwM err
+                      Right v  -> return $ ok v
                   _ -> throwM $ MissingEntity entity
            in Matched {matchedReminder = input, matchedOutput = output}
     , toString = "param " ++ C8.unpack name

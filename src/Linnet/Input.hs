@@ -19,7 +19,6 @@ data Input =
 
 inputFromGet :: T.Text -> [QueryItem] -> Input
 inputFromGet path items =
-  Input
-    {request = defaultRequest {pathInfo = rem, rawPathInfo = TE.encodeUtf8 path, queryString = items}, reminder = rem}
+  Input {request = defaultRequest {pathInfo = r, rawPathInfo = TE.encodeUtf8 path, queryString = items}, reminder = r}
   where
-    rem = T.split (== '/') path
+    r = T.split (== '/') path

@@ -19,6 +19,7 @@ import qualified Data.ByteString.Conversion as BC
 import qualified Data.ByteString.Lazy       as BL
 import           Data.Either.Combinators
 import qualified Data.Text                  as T
+import qualified Data.Text.Encoding         as TE
 import           Data.Text.Read             (decimal, double, rational, signed)
 import           GHC.Base                   (Symbol)
 import           Linnet.Endpoints.Entity    (Entity)
@@ -36,6 +37,9 @@ class DecodePath a where
 instance DecodePath T.Text where
   decodePath = Just
 
+instance DecodePath B.ByteString where
+  decodePath = Just . TE.encodeUtf8
+
 instance DecodePath Integer where
   decodePath t = rightToMaybe $ fst <$> signed decimal t
 
@@ -46,9 +50,6 @@ instance DecodePath Double where
   decodePath t = rightToMaybe $ fst <$> signed double t
 
 instance DecodePath Float where
-  decodePath t = rightToMaybe $ fst <$> signed rational t
-
-instance DecodePath Rational where
   decodePath t = rightToMaybe $ fst <$> signed rational t
 
 class DecodeEntity a where
@@ -69,6 +70,3 @@ instance DecodeEntity Double
 
 instance DecodeEntity Float where
   decodeEntity entity = right realToFrac . decodeEntity @Double entity
-
-instance DecodeEntity Rational where
-  decodeEntity entity = right fromIntegral . decodeEntity @Integer entity

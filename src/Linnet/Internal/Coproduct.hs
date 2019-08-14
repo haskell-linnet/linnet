@@ -18,6 +18,9 @@ module Linnet.Internal.Coproduct
 
 data CNil
 
+instance Eq CNil where
+  (==) _ _ = True
+
 data Coproduct a b where
   Inl :: a -> Coproduct a b
   Inr :: b -> Coproduct a b
