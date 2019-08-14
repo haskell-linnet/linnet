@@ -12,22 +12,22 @@ module Linnet.Compile
   ( Compile(..)
   ) where
 
-import           Control.Arrow              (Kleisli (..))
-import           Control.Exception          (SomeException)
-import           Control.Monad.Catch        (MonadCatch)
-import           Control.Monad.Trans.Reader (ReaderT (..))
-import           Data.Data                  (Proxy, Typeable)
+import           Control.Arrow             (Kleisli (..))
+import           Control.Exception         (SomeException)
+import           Control.Monad.Catch       (MonadCatch)
+import           Data.Data                 (Proxy)
+import           GHC.TypeLits              (KnownSymbol)
 import           Linnet.Endpoint
-import           Linnet.Errors              (LinnetError)
+import           Linnet.Errors             (LinnetError)
 import           Linnet.Input
 import           Linnet.Internal.Coproduct
 import           Linnet.Internal.HList
-import           Linnet.Output              (Output (..), outputToResponse,
-                                             payloadError)
-import           Linnet.ToResponse          (ToResponse)
-import           Network.HTTP.Types         (badRequest400, status404)
-import           Network.Wai                (Request, Response, pathInfo,
-                                             responseLBS)
+import           Linnet.Output             (Output (..), outputToResponse,
+                                            payloadError)
+import           Linnet.ToResponse         (ToResponse)
+import           Network.HTTP.Types        (badRequest400, status404)
+import           Network.Wai               (Request, Response, pathInfo,
+                                            responseLBS)
 
 class Compile cts m es where
   compile :: es -> Kleisli m Request Response
@@ -35,7 +35,7 @@ class Compile cts m es where
 instance (Monad m) => Compile CNil m (HList '[]) where
   compile _ = Kleisli $ const notFoundResponse
 
-instance (Typeable ct, ToResponse ct a, ToResponse ct SomeException, Compile cts m (HList es), MonadCatch m) =>
+instance (KnownSymbol ct, ToResponse ct a, ToResponse ct SomeException, Compile cts m (HList es), MonadCatch m) =>
          Compile (Coproduct (Proxy ct) cts) m (HList (Endpoint m a ': es)) where
   compile (ea ::: es) =
     Kleisli

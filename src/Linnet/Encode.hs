@@ -9,13 +9,14 @@ module Linnet.Encode
   , encode
   ) where
 
-import           Data.ByteString         as BS
-import           Data.ByteString.Lazy    as BL
-import           Data.Text               as TS
-import           Data.Text.Encoding      as TSE
-import           Data.Text.Lazy          as TL
-import           Data.Text.Lazy.Encoding as TLE
-import           GHC.Base                (Symbol)
+import           Data.ByteString            as BS
+import           Data.ByteString.Conversion as BC
+import           Data.ByteString.Lazy       as BL
+import           Data.Text                  as TS
+import           Data.Text.Encoding         as TSE
+import           Data.Text.Lazy             as TL
+import           Data.Text.Lazy.Encoding    as TLE
+import           GHC.Base                   (Symbol)
 import           Linnet.ContentTypes
 
 -- | Encoding of some type @a@ into payload of HTTP response
@@ -35,3 +36,15 @@ instance Encode TextPlain TS.Text where
 
 instance Encode TextPlain TL.Text where
   encode = TLE.encodeUtf8
+
+instance Encode TextPlain Int where
+  encode = BC.toByteString
+
+instance Encode TextPlain Integer where
+  encode = BC.toByteString
+
+instance Encode TextPlain Double where
+  encode = BC.toByteString
+
+instance Encode TextPlain Float where
+  encode = BC.toByteString

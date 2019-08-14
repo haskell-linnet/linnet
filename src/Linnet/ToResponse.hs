@@ -37,6 +37,9 @@ instance (Encode ct a, KnownSymbol ct) => ToResponse' 'Value ct a where
 instance ToResponse' 'ResponseValue ct Response where
   toResponse' = id
 
+instance (KnownSymbol ct) => ToResponse' 'UnitValue ct () where
+  toResponse' _ = mkResponse @ct mempty
+
 instance ToResponse' 'CNilValue ct CNil where
   toResponse' _ = responseLBS status404 [] mempty
 
@@ -55,9 +58,11 @@ data Value
   | ResponseValue
   | CoproductValue
   | CNilValue
+  | UnitValue
 
 type family ValueT (a :: *) :: Value where
   ValueT (Coproduct _ _) = 'CoproductValue
   ValueT CNil = 'CNilValue
   ValueT Response = 'ResponseValue
+  ValueT () = 'UnitValue
   ValueT _ = 'Value

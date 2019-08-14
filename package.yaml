@@ -24,11 +24,11 @@ dependencies:
   - text
   - utf8-string
   - either
-  - transformers-base
   - transformers
   - bytestring-conversion
   - case-insensitive
   - exceptions
+  - uri-encode
 
 library:
   source-dirs: src
@@ -46,3 +46,4 @@ tests:
       - hspec
       - QuickCheck
       - quickcheck-instances
+      - quickcheck-classes

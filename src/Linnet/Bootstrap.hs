@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns          #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE GADTs                 #-}
@@ -16,9 +17,7 @@ module Linnet.Bootstrap
   ) where
 
 import           Control.Arrow             (Kleisli (..))
-import           Control.Monad.Base        (MonadBase (..))
 import           Data.Data                 (Proxy)
-import           Data.Functor.Identity     (Identity, runIdentity)
 import           GHC.Base                  (Symbol)
 import qualified Linnet.Compile            as Compile
 import           Linnet.Endpoint
@@ -70,4 +69,4 @@ compile (Bootstrap e) = Compile.compile @cts @m e
 --
 --  * Some monad for logging (i.e. co-log)
 toApp :: (forall a. m a -> IO a) -> Kleisli m Request Response -> Application
-toApp toIO kleisli request callback = toIO (runKleisli kleisli request) >>= callback
+toApp toIO !kleisli request callback = toIO (runKleisli kleisli request) >>= callback

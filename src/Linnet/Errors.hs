@@ -26,8 +26,7 @@ data LinnetError
 instance Semigroup LinnetError where
   (LinnetErrors es) <> (LinnetErrors es') =
     let (h:t) = toList es
-        (h':t') = toList es
-     in LinnetErrors $ h :| (t ++ [h] ++ t')
+     in LinnetErrors $ h :| (t ++ toList es')
   (LinnetErrors es) <> err = LinnetErrors $ err <| es
   err <> (LinnetErrors es) = LinnetErrors $ err <| es
   e <> e' = LinnetErrors $ e :| [e']
