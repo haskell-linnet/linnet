@@ -12,22 +12,22 @@ module Linnet.Compile
   ( Compile(..)
   ) where
 
-import           Control.Arrow              (Kleisli (..))
-import           Control.Exception          (SomeException)
-import           Control.Monad.Catch        (MonadCatch)
-import           Data.Data                  (Proxy, Typeable)
+import           Control.Arrow             (Kleisli (..))
+import           Control.Exception         (SomeException)
+import           Control.Monad.Catch       (MonadCatch)
+import           Data.Data                 (Proxy)
+import           GHC.TypeLits              (KnownSymbol)
 import           Linnet.Endpoint
-import           Linnet.Errors              (LinnetError)
+import           Linnet.Errors             (LinnetError)
 import           Linnet.Input
 import           Linnet.Internal.Coproduct
 import           Linnet.Internal.HList
-import           Linnet.Output              (Output (..), outputToResponse,
-                                             payloadError)
-import           Linnet.ToResponse          (ToResponse)
-import           Network.HTTP.Types         (badRequest400, status404)
-import           Network.Wai                (Request, Response, pathInfo,
-                                             responseLBS)
-import GHC.TypeLits (KnownSymbol)
+import           Linnet.Output             (Output (..), outputToResponse,
+                                            payloadError)
+import           Linnet.ToResponse         (ToResponse)
+import           Network.HTTP.Types        (badRequest400, status404)
+import           Network.Wai               (Request, Response, pathInfo,
+                                            responseLBS)
 
 class Compile cts m es where
   compile :: es -> Kleisli m Request Response
