@@ -1,12 +1,12 @@
 name:                linnet
 version:             0.1.0.0
-github:              "https://github.com/haskell-linnet/linnet"
-license:             "Apache"
-author:              "Sergey Kolbasov"
-maintainer:          "whoisliar@gmail.com"
-copyright:           "2019 Sergey Kolbasov"
-category:            "linnet"
-synopsis:            "Lightweight library for building HTTP API"
+github:              haskell-linnet/linnet
+license:             Apache
+author:              sergeykolbasov
+maintainer:          whoisliar@gmail.com
+copyright:           2019 Sergey Kolbasov
+category:            linnet
+synopsis:            Lightweight library for building HTTP API
 
 extra-source-files:
   - README.md

@@ -22,7 +22,7 @@ import           Util
 
 withHeader :: (ToByteString a) => BS.ByteString -> a -> Input
 withHeader key value =
-  let i = inputFromGet "/" []
+  let i = inputGet "/" []
       req = request i
       headers = requestHeaders req
    in i {request = req {requestHeaders = headers ++ [(CI.mk key, toByteString' value)]}}
@@ -36,7 +36,7 @@ spec = do
   checkLaws "Float" $ entityEndpointLaws @Float @(Either SomeException) (header "x") (withHeader "x")
   it "throws an error if header is missing" $ do
     let e = header @BS.ByteString @IO "foo"
-    result <- resultOutputEither (runEndpoint e (inputFromGet "/" []))
+    result <- resultOutputEither (runEndpoint e (inputGet "/" []))
     result `shouldBe` (Left $ toException (MissingEntity (Header "foo")))
   it "throws an error if header is malformed" $ do
     let e = header @Int @IO "foo"
@@ -44,5 +44,5 @@ spec = do
     result `shouldBe` (Left $ toException (EntityNotParsed (Header "foo") (DecodeError "Failed reading: Invalid Int")))
   it "returns nothing if cookie is not required" $ do
     let e = headerMaybe @BS.ByteString @IO "foo"
-    result <- resultOutputEither (runEndpoint e (inputFromGet "/" []))
+    result <- resultOutputEither (runEndpoint e (inputGet "/" []))
     result `shouldBe` (Right $ Just $ ok Nothing)

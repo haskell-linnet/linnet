@@ -117,12 +117,12 @@ spec = do
     conjoin
       [ property $ \(t :: T.Text) ->
           monadicIO $ do
-            p <- liftIO $ resultValueUnsafe (runEndpoint (pure t) (inputFromGet "/" []))
-            l <- liftIO $ resultValueUnsafe (runEndpoint (lift $ pure t) (inputFromGet "/" []))
+            p <- liftIO $ resultValueUnsafe (runEndpoint (pure t) (inputGet "/" []))
+            l <- liftIO $ resultValueUnsafe (runEndpoint (lift $ pure t) (inputGet "/" []))
             assert (p == Just t)
             assert (l == Just t)
       , property $ \(out :: Output T.Text) ->
-          resultOutputUnsafe (runEndpoint (liftOutputM $ pure out) (inputFromGet "/" [])) == Identity (Just out)
+          resultOutputUnsafe (runEndpoint (liftOutputM $ pure out) (inputGet "/" [])) == Identity (Just out)
       ]
   it "handles the exception raised in a monad" $
     property $ \(i :: Input, s :: T.Text) ->
@@ -137,7 +137,7 @@ spec = do
         result <- liftIO $ runEndpoint e i & resultOutputEither
         assert (result == Left (toException $ TestException "test"))
   it "throws MissingEntity if an item wasn't found" $ do
-    let i = inputFromGet "/" []
+    let i = inputGet "/" []
     let name = "test"
     let (endpoints, exceptions) =
           unzip
@@ -187,7 +187,7 @@ spec = do
   it "returns request in root endpoint" $
     property $ \(i :: Input) -> resultValueUnsafe (runEndpoint root i) == Identity (Just $ request i)
   it "adjoins endpoints together in //" $ do
-    let i = inputFromGet "foo/bar/zoo" []
+    let i = inputGet "foo/bar/zoo" []
     let endpoint = (path @T.Text // path @T.Text // path @T.Text) ~>> (\p1 p2 p3 -> return $ ok (p1, p2, p3))
     result <- liftIO $ resultValueUnsafe $ runEndpoint endpoint i
     result `shouldBe` Just ("foo", "bar", "zoo")

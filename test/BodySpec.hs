@@ -30,7 +30,7 @@ import           Util
 
 withBody :: (ToByteString a) => MVar a -> Input
 withBody mvar =
-  let i = inputFromGet "/" []
+  let i = inputGet "/" []
       req = request i
       mBody = do
         result <- tryTakeMVar mvar
@@ -42,7 +42,7 @@ withBody mvar =
 
 withEmptyBody :: Input
 withEmptyBody =
-  let i = inputFromGet "/" []
+  let i = inputGet "/" []
       req = request i
    in i {request = req {requestBody = pure mempty, requestBodyLength = KnownLength 0}}
 
@@ -64,7 +64,7 @@ spec = do
         assert $ result == (Right $ Just (ok (Just foo)))
   it "throws an error if body is missing" $ do
     let e = textBody @Foo @IO
-    result <- resultOutputEither (runEndpoint e (inputFromGet "/" []))
+    result <- resultOutputEither (runEndpoint e (inputGet "/" []))
     result `shouldBe` (Left $ toException (MissingEntity Body))
   it "throws an error if body is malformed" $ do
     let e = textBody @Foo @IO

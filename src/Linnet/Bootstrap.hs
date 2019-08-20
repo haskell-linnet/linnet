@@ -57,11 +57,11 @@ compile (Bootstrap e) = Compile.compile @cts @m e
 
 -- | Convert @Kleisli m Request Response@ into WAI @Application@
 --
--- > run 9000 $ bootstrap @TextPlain (pure "foo") & compile @ toApp id
+-- > bootstrap @TextPlain (pure "foo") & compile & toApp id
 --
 -- The first parameter here is a natural transformation of 'Endpoint's monad @m@ into @IO@.
--- In case if your monad is @IO@ already then @id@ is just enough. Otherwise, it's a good place to define how to "start"
--- your monad for each request to come and convert it to @IO@.
+-- In case if selected monad is @IO@ already then @id@ is just enough. Otherwise, it's a good place to define how to "start"
+-- custom monad for each request to come and convert it to @IO@.
 --
 -- As an example:
 --

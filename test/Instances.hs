@@ -16,8 +16,7 @@ import           Control.Applicative                  (empty)
 import           Control.Exception                    (Exception,
                                                        SomeException (..),
                                                        catch, toException)
-import           Control.Monad.Catch                  (MonadCatch, MonadThrow,
-                                                       catchAll, throwM)
+import qualified Control.Monad.Catch                  as MC
 import qualified Data.ByteString                      as B
 import           Data.ByteString.Builder              (toLazyByteString)
 import qualified Data.ByteString.Builder              as Builder
@@ -33,7 +32,7 @@ import qualified Data.Text                            as T
 import qualified Data.Text.Encoding                   as TE
 import           GHC.IO                               (unsafePerformIO)
 import           Linnet                               (Decode (..), Encode (..),
-                                                       TextPlain, TextHtml)
+                                                       TextHtml, TextPlain)
 import           Linnet.Endpoint
 import           Linnet.Endpoints.Entity
 import           Linnet.Errors
@@ -199,14 +198,14 @@ genPayloadOutput = do
 genOutput :: (Arbitrary a) => Gen (Output a)
 genOutput = oneof [genPayloadOutput, genEmptyOutput, genFailureOutput]
 
-genEmptyEndpoint :: (MonadCatch m) => Gen (Endpoint m a)
+genEmptyEndpoint :: (MC.MonadCatch m) => Gen (Endpoint m a)
 genEmptyEndpoint = pure empty
 
-genConstEndpoint :: (MonadCatch m, Arbitrary a) => Gen (Endpoint m a)
+genConstEndpoint :: (MC.MonadCatch m, Arbitrary a) => Gen (Endpoint m a)
 genConstEndpoint = pure <$> arbitrary
 
-genErrorEndpoint :: (MonadThrow m) => Gen (Endpoint m a)
-genErrorEndpoint = lift . throwM . TestException <$> arbitrary
+genErrorEndpoint :: (MC.MonadThrow m) => Gen (Endpoint m a)
+genErrorEndpoint = lift . MC.throwM . TestException <$> arbitrary
 
 genEndpoint ::
      forall m a. (Arbitrary (Input -> Output a), Monad m)
@@ -269,7 +268,7 @@ instance Arbitrary LinnetError where
 instance Arbitrary a => Arbitrary (Output a) where
   arbitrary = genOutput
 
-instance (Arbitrary a, MonadCatch m) => Arbitrary (Endpoint m a) where
+instance (Arbitrary a, MC.MonadCatch m) => Arbitrary (Endpoint m a) where
   arbitrary = oneof [genEndpoint, genErrorEndpoint, genConstEndpoint, genEmptyEndpoint]
 
 instance (Eq a) => Eq (Payload a) where
@@ -306,7 +305,7 @@ instance Decode TextPlain T.Text where
 instance Eq a => Eq (IO a) where
   (==) i i' = unsafePerformIO (tryAll i) == unsafePerformIO (tryAll i')
     where
-      tryAll m = catchAll (fmap Right m) (pure . Left)
+      tryAll m = MC.catchAll (fmap Right m) (pure . Left)
 
 instance Eq Response where
   (==) (ResponseBuilder s hs b) (ResponseBuilder s' hs' b') =

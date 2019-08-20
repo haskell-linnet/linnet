@@ -40,11 +40,9 @@ instance (KnownSymbol ct, ToResponse ct a, ToResponse ct SomeException, Compile 
   compile (ea ::: es) =
     Kleisli
       (\req ->
-         let input = Input {reminder = pathInfo req, request = req}
-             handler = respond400
-          in case runEndpoint (handle handler ea) input of
-               Matched _ mo -> outputToResponse @a @ct <$> mo
-               NotMatched   -> runKleisli (compile @cts es) req)
+         case runEndpoint (handle respond400 ea) (inputFromRequest req) of
+           Matched _ mo -> outputToResponse @a @ct <$> mo
+           NotMatched   -> runKleisli (compile @cts es) req)
 
 notFoundResponse :: (Applicative m) => m Response
 notFoundResponse = pure $ responseLBS status404 [] mempty

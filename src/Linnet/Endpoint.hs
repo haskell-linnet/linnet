@@ -184,11 +184,11 @@ transform fn ea =
 
 -- | Handle exception in monad @m@ of Endpoint result using provided function that returns new 'Output'
 handle :: (MC.MonadCatch m, Exception e) => (e -> m (Output a)) -> Endpoint m a -> Endpoint m a
-handle fn = transformOutput $ MC.handle fn
+handle = transformOutput . MC.handle
 
 -- | Handle all exceptions in monad @m@ of Endpoint result
 handleAll :: (MC.MonadCatch m) => (SomeException -> m (Output a)) -> Endpoint m a -> Endpoint m a
-handleAll fn = transformOutput $ MC.handleAll fn
+handleAll = transformOutput . MC.handleAll
 
 -- | Lift an exception of type @e@ into 'Either'
 try :: (MC.MonadCatch m, Exception e) => Endpoint m a -> Endpoint m (Either e a)

@@ -4,7 +4,7 @@ Description: Lightweight HTTP library on top of WAI
 Copyright: (c) Sergey Kolbasov, 2019
 License: Apache License 2.0
 
-Linnet [ˈlɪnɪt] is a lightweight Haskell library to build HTTP API on top of <http://hackage.haskell.org/package/wai WAI>.
+Linnet [ˈlɪnɪt] is a lightweight Haskell library for building HTTP API on top of <http://hackage.haskell.org/package/wai WAI>.
 Library design is heavily inspired by Scala <https://github.com/finagle/finch Finch>.
 
 -}
@@ -123,9 +123,7 @@ import           Linnet.Output
 --  > helloWorld = get(p' "hello" // path @Text) ~>> (\name -> return $ ok ("Hello, " `append` name))
 --  >
 --  > main :: IO ()
---  > main = run 9000 app
---  > where
---  >   app = bootstrap @TextPlain helloWorld & compile & toApp id
+--  > main = run 9000 $ bootstrap @TextPlain helloWorld & compile & toApp id
 --
 -- Now try to call your server with @curl@ command:
 --
