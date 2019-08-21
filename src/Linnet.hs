@@ -9,10 +9,11 @@ Library design is heavily inspired by Scala <https://github.com/finagle/finch Fi
 
 -}
 module Linnet
+  (
   -- * Hello world
   -- $helloWorld
   -- * Endpoint and core combinators
-  ( Endpoint(..)
+   Endpoint(..)
   , (~>)
   , (~>>)
   , (//)
