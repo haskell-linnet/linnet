@@ -12,7 +12,7 @@ extra-source-files:
   - README.md
   - LICENSE
 
-description:         Please see the README on GitHub at <https://github.com/haskell-linnet/linnet#readme>
+description:         Please see the documentation at <http://linnet.io>
 
 dependencies:
   - base >= 4.7 && < 5

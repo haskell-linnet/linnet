@@ -7,6 +7,8 @@ License: Apache License 2.0
 Linnet [ˈlɪnɪt] is a lightweight Haskell library for building HTTP API on top of <http://hackage.haskell.org/package/wai WAI>.
 Library design is heavily inspired by Scala <https://github.com/finagle/finch Finch>.
 
+See the detailed documentation on <http://linnet.io linnet.io>.
+
 -}
 module Linnet
   (

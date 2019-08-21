@@ -3,6 +3,8 @@ Linnet
 
 Linnet [ˈlɪnɪt] is a lightweight Haskell library for building HTTP API on top of [WAI](http://hackage.haskell.org/package/wai). Library design is heavily inspired by Scala [Finch](https://github.com/finagle/finch).
 
+Check out [linnet.io](http://linnet.io) for documentation.
+
 Badges
 ------
 [![Travis (.com) branch](https://img.shields.io/travis/com/haskell-linnet/linnet/master?style=flat-square)](https://travis-ci.com/haskell-linnet/linnet) [![Gitter](https://img.shields.io/gitter/room/haskell-linnet/community?style=flat-square)](https://gitter.im/haskell-linnet/community) ![Hackage](https://img.shields.io/hackage/v/linnet?style=flat-square)
