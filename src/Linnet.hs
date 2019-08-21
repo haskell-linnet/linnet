@@ -9,11 +9,10 @@ Library design is heavily inspired by Scala <https://github.com/finagle/finch Fi
 
 -}
 module Linnet
-  (
   -- * Hello world
   -- $helloWorld
   -- * Endpoint and core combinators
-    Endpoint(..)
+  ( Endpoint(..)
   , (~>)
   , (~>>)
   , (//)
@@ -81,11 +80,13 @@ module Linnet
   , badGateway
   , serviceUnavailable
   , gatewayTimeout
-  -- * Running an endpoint
+  -- * Compiling an endpoint
   , bootstrap
   , serve
   , compile
   , toApp
+  -- * Running a server
+  , run
   -- * Content-Type literals
   , ApplicationJson
   , TextHtml
@@ -99,7 +100,7 @@ import           Linnet.Encode
 import           Linnet.Endpoint
 import           Linnet.Endpoints
 import           Linnet.Output
-
+import           Network.Wai.Handler.Warp
 -- $helloWorld
 -- Hello @name@ example using warp server:
 --
@@ -113,8 +114,6 @@ import           Linnet.Output
 --  > import Data.Function ((&))
 --  > import Data.Text (Text, append)
 --  > import Linnet
---  > import Network.Wai.Handler.Warp (run)
---  >
 --  >
 --  > -- It's necessary to define encoding of exceptions for content-type "text/plain". Here it returns no content
 --  > instance Encode TextPlain SomeException where

@@ -191,7 +191,7 @@ handleAll :: (MC.MonadCatch m) => (SomeException -> m (Output a)) -> Endpoint m 
 handleAll = transformOutput . MC.handleAll
 
 -- | Lift an exception of type @e@ into 'Either'
-try :: (MC.MonadCatch m, Exception e) => Endpoint m a -> Endpoint m (Either e a)
+try :: (Exception e, MC.MonadCatch m) => Endpoint m a -> Endpoint m (Either e a)
 try ea =
   ea
     { runEndpoint =

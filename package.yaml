@@ -2,7 +2,7 @@ name:                linnet
 version:             0.1.0.0
 github:              haskell-linnet/linnet
 license:             Apache
-author:              sergeykolbasov
+author:              Sergey Kolbasov
 maintainer:          whoisliar@gmail.com
 copyright:           2019 Sergey Kolbasov
 category:            linnet
@@ -29,6 +29,7 @@ dependencies:
   - case-insensitive
   - exceptions
   - uri-encode
+  - mtl
 
 library:
   source-dirs: src

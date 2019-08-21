@@ -16,7 +16,7 @@ module Linnet.Bootstrap
   , toApp
   ) where
 
-import           Control.Arrow             (Kleisli (..))
+import           Control.Monad.Reader      (ReaderT (..))
 import           Data.Data                 (Proxy)
 import           GHC.Base                  (Symbol)
 import qualified Linnet.Compile            as Compile
@@ -45,17 +45,17 @@ serve ::
   -> Bootstrap m (Coproduct (Proxy ct) cts) (HList (Endpoint m a ': es))
 serve ea (Bootstrap e) = Bootstrap @m @(Coproduct (Proxy ct) cts) (ea ::: e)
 
--- | Compile 'Bootstrap' into @Kleisli m Request Response@ for further combinations.
+-- | Compile 'Bootstrap' into @ReaderT Request m Response@ for further combinations.
 -- Might be useful to implement middleware in context of the same monad @m@:
 --
 -- > bootstrap @TextPlain (pure "foo") & compile
 compile ::
      forall cts m es. (Compile.Compile cts m es)
   => Bootstrap m cts es
-  -> Kleisli m Request Response
+  -> ReaderT Request m Response
 compile (Bootstrap e) = Compile.compile @cts @m e
 
--- | Convert @Kleisli m Request Response@ into WAI @Application@
+-- | Convert @ReaderT Request m Response@ into WAI @Application@
 --
 -- > bootstrap @TextPlain (pure "foo") & compile & toApp id
 --
@@ -68,5 +68,5 @@ compile (Bootstrap e) = Compile.compile @cts @m e
 --  * @ReaderT RequestContext IO@ could be used to pass some data as local context for the request.
 --
 --  * Some monad for logging (i.e. co-log)
-toApp :: (forall a. m a -> IO a) -> Kleisli m Request Response -> Application
-toApp toIO !kleisli request callback = toIO (runKleisli kleisli request) >>= callback
+toApp :: (forall a. m a -> IO a) -> ReaderT Request m Response -> Application
+toApp toIO !readerT request callback = toIO (runReaderT readerT request) >>= callback

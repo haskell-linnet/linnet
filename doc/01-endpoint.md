@@ -28,7 +28,7 @@ data EndpointResult (m :: * -> *) a
 
 ## Endpoint combinators
 
-Linnet exposes two operators that allow to combine endpoints using _AND/OR_ logic
+Linnet exposes two operators that allow to combine endpoints using _AND/OR_ logic.
 
 ```haskell top hide
 {-# LANGUAGE OverloadedStrings      #-}
@@ -74,7 +74,7 @@ it's a rare situation to interact with them directly.
 There are multiple options available to transform endpoints, and usually this transformation itself is a business logic
 of application.
 
-***Endpoint as Applicative***
+**Endpoint as Applicative**
 
 Both `Functor` and `Applicative` type classes are defined for `Endpoint`, natively exposing simple transformations:
 
@@ -85,7 +85,7 @@ lifted = pure 42
 multiplied = (* 2) <$> lifted 
 ```
 
-***Map over HList***
+**Map over HList**
 
 But often there is a need to handle multiple parameters (product of them). It's still possible
 to pattern match an `HList`, but also quite unpractical. That's why there is `~>>` operator available:
@@ -98,20 +98,14 @@ nameAndSurname = (path @Text // path @Text) ~>> (\name surname -> return $ ok (n
 Example above demonstrates how lambda function of two parameters is applied to endpoint of `HList '[Text, Text]`.
 Resulting type of this lambda always should be some `m (Output a)`.
 
-***Single-type endpoint***
+**Single-type endpoint**
 
 If endpoint is just a single type like `Endpoint m Int`, beside usual `fmap` there is an operator `~>`
 that allows to change default `Ok` output to something different:
 
 ```haskell top
 nameEndpoint :: Endpoint IO Text
-nameEndpoint = get(param @Text "name") ~> (\name -> return $ ok ("Name: " `append` name))
+nameEndpoint = get(param @Text "name") ~> (\name -> return $ created ("Name: " `append` name))
 ```
 
 Strictly speaking, `~>` operator is just an inverted alias of `mapOutputM` function.
-
-# Error handling
-# Bootstrap
-## Multiple content-types
-## Custom monad
-## Kleisli middleware

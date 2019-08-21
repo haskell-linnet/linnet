@@ -24,7 +24,6 @@ import Data.Function ((&))
 import Data.Text (Text, append)
 import Linnet
 import Network.Wai (Application)
-import Network.Wai.Handler.Warp (run)
 
 -- Linnet makes no assumption on how to encode exceptions.
 -- It's necessary to define encoder of exceptions for used content-types.
@@ -40,7 +39,7 @@ app :: Application
 app = bootstrap @TextPlain helloName & compile & toApp id
 ```
 
-To run the application using [Warp](http://hackage.haskell.org/package/warp-3.3.0/docs/Network-Wai-Handler-Warp.html#v:run):
+To run the application using re-imported [Warp](http://hackage.haskell.org/package/warp-3.3.0/docs/Network-Wai-Handler-Warp.html#v:run):
 ```haskell
 main :: IO ()
 main = run 9000 app

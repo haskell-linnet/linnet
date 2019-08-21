@@ -4,7 +4,7 @@ title: Encode & Decode
 
 # Encode
 
-To convert [Output a](02-output.html) to WAI `Response` Linnet employs `Encode` type class:
+To convert [Output a](03-output.html) to WAI `Response` Linnet employs `Encode` type class:
 
 ```haskell
 import Data.ByteString.Lazy (ByteString)
@@ -34,8 +34,9 @@ instance Encode TextPlain SomeException where
     encode _ = mempty
 ``` 
 
-In a nutshell, this type class could be also treated as a single point of exceptions handling where specific errors
-are rendered in a way they should be.
+In a nutshell, this type class could be treated as a single point of exceptions handling where specific errors
+are rendered in a way they should be. **Only errors inside of Output are encoded this way**.
+Information on the general error handling is available in the corresponding section.
 
 ## Decode
 

@@ -22,6 +22,7 @@ import Linnet.Internal.Coproduct (CNil, Coproduct(..))
 import Network.HTTP.Types (status200, status404)
 import Network.Wai (Response, responseLBS)
 
+-- | Type-class to convert a value of type @a@ into Response with Content-Type of @ct@
 class ToResponse (ct :: Symbol) a where
   toResponse :: a -> Response
 
