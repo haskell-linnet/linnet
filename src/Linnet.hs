@@ -4,7 +4,7 @@ Description: Lightweight HTTP library on top of WAI
 Copyright: (c) Sergey Kolbasov, 2019
 License: Apache License 2.0
 
-Linnet [ˈlɪnɪt] is a lightweight Haskell library to build HTTP API on top of <http://hackage.haskell.org/package/wai WAI>.
+Linnet [ˈlɪnɪt] is a lightweight Haskell library for building HTTP API on top of <http://hackage.haskell.org/package/wai WAI>.
 Library design is heavily inspired by Scala <https://github.com/finagle/finch Finch>.
 
 -}
@@ -13,7 +13,7 @@ module Linnet
   -- * Hello world
   -- $helloWorld
   -- * Endpoint and core combinators
-    Endpoint(..)
+   Endpoint(..)
   , (~>)
   , (~>>)
   , (//)
@@ -81,11 +81,13 @@ module Linnet
   , badGateway
   , serviceUnavailable
   , gatewayTimeout
-  -- * Running an endpoint
+  -- * Compiling an endpoint
   , bootstrap
   , serve
   , compile
   , toApp
+  -- * Running a server
+  , run
   -- * Content-Type literals
   , ApplicationJson
   , TextHtml
@@ -99,7 +101,7 @@ import           Linnet.Encode
 import           Linnet.Endpoint
 import           Linnet.Endpoints
 import           Linnet.Output
-
+import           Network.Wai.Handler.Warp
 -- $helloWorld
 -- Hello @name@ example using warp server:
 --
@@ -113,8 +115,6 @@ import           Linnet.Output
 --  > import Data.Function ((&))
 --  > import Data.Text (Text, append)
 --  > import Linnet
---  > import Network.Wai.Handler.Warp (run)
---  >
 --  >
 --  > -- It's necessary to define encoding of exceptions for content-type "text/plain". Here it returns no content
 --  > instance Encode TextPlain SomeException where
@@ -123,9 +123,7 @@ import           Linnet.Output
 --  > helloWorld = get(p' "hello" // path @Text) ~>> (\name -> return $ ok ("Hello, " `append` name))
 --  >
 --  > main :: IO ()
---  > main = run 9000 app
---  > where
---  >   app = bootstrap @TextPlain helloWorld & compile & toApp id
+--  > main = run 9000 $ bootstrap @TextPlain helloWorld & compile & toApp id
 --
 -- Now try to call your server with @curl@ command:
 --

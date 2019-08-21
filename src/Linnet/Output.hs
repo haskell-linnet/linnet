@@ -44,13 +44,14 @@ module Linnet.Output
 
 import           Control.Exception         (Exception, SomeException,
                                             toException)
+import           Control.Monad.Catch       (MonadThrow (..))
 import qualified Data.ByteString           as B
 import qualified Data.CaseInsensitive      as CI
+import           GHC.TypeLits              (KnownSymbol)
 import           Linnet.ToResponse         (ToResponse (..))
 import           Network.HTTP.Types        (Header)
 import           Network.HTTP.Types.Status
 import           Network.Wai
-import GHC.TypeLits (KnownSymbol)
 
 -- | Output of 'Endpoint' that carries some 'Payload' @a@ together with response status and headers
 data Output a =
@@ -95,6 +96,9 @@ instance Monad Output where
     Output {outputStatus = status, outputPayload = NoPayload, outputHeaders = headers}
   (>>=) (Output status (ErrorPayload e) headers) _ =
     Output {outputStatus = status, outputPayload = ErrorPayload e, outputHeaders = headers}
+
+instance MonadThrow Output where
+  throwM = internalServerError
 
 instance Foldable Output where
   foldMap fn (Output _ (Payload a) _) = fn a
@@ -234,5 +238,4 @@ outputToResponse output =
           Payload a      -> toResponse @ct a
           NoPayload      -> toResponse @ct ()
           ErrorPayload e -> toResponse @ct $ toException e
-   in
-    (mapResponseStatus (const (outputStatus output)) . mapResponseHeaders (++ outputHeaders output)) response
+   in (mapResponseStatus (const (outputStatus output)) . mapResponseHeaders (++ outputHeaders output)) response

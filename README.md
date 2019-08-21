@@ -1,7 +1,7 @@
 Linnet
 ------
 
-Linnet [ˈlɪnɪt] is a lightweight Haskell library to build HTTP API on top of [WAI](http://hackage.haskell.org/package/wai). Library design is heavily inspired by Scala [Finch](https://github.com/finagle/finch).
+Linnet [ˈlɪnɪt] is a lightweight Haskell library for building HTTP API on top of [WAI](http://hackage.haskell.org/package/wai). Library design is heavily inspired by Scala [Finch](https://github.com/finagle/finch).
 
 Badges
 ------
