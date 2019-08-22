@@ -34,8 +34,7 @@ helloWorld = get(p' "hello" // path @Text) ~>> (\name -> return $ ok ("Hello, " 
 
 main :: IO ()
 main = run 9000 app
-where
-  app = bootstrap @TextPlain helloWorld & compile & toApp id
+       where app = bootstrap @TextPlain helloWorld & compile & toApp id
 ```
 
 Now try to call your application with:
