@@ -1,0 +1,9 @@
+resolver: lts-14.2
+
+packages:
+- .
+
+extra-deps:
+  - ../linnet
+
+pvp-bounds: both
