@@ -1,0 +1,39 @@
+name:                linnet-aeson
+version:             0.1.0.0
+github:              haskell-linnet/linnet-aeson
+license:             Apache
+author:              Sergey Kolbasov
+maintainer:          whoisliar@gmail.com
+copyright:           2019 Sergey Kolbasov
+category:            linnet
+synopsis:            Aeson JSON support for Linnet
+
+extra-source-files:
+- README.md
+- LICENSE
+
+description:         Please see the documentation at <http://linnet.io>
+
+dependencies:
+- base >= 4.7 && < 5
+- bytestring
+- aeson
+- linnet
+
+library:
+  source-dirs: src
+
+tests:
+  linnet-aeson-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - linnet-aeson
+    - hspec
+    - QuickCheck
+    - quickcheck-instances
+    - quickcheck-classes
