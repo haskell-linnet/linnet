@@ -17,7 +17,6 @@ description:         Please see the documentation at <http://linnet.io>
 dependencies:
 - base >= 4.7 && < 5
 - bytestring
-- text
 - aeson
 - linnet
 
@@ -34,6 +33,7 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - linnet-aeson
+    - text
     - hspec
     - QuickCheck
     - quickcheck-instances
