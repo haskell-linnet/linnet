@@ -49,3 +49,7 @@ Now, to the call:
 ```bash
 curl -v http://localhost:9000/hello/linnet
 ```
+
+## Additional sources
+
+- [API documentation](http://hackage.haskell.org/package/linnet)

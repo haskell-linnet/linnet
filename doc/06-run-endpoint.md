@@ -2,7 +2,7 @@
 title: Run Endpoint
 ---
 
-# Run `Endpoint`
+# Run Endpoint
 
 ## Bootstrap
 
