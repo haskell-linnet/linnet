@@ -1,5 +1,5 @@
 name:                linnet
-version:             0.1.0.0
+version:             0.1.0.1
 github:              haskell-linnet/linnet
 license:             Apache
 author:              Sergey Kolbasov
@@ -22,7 +22,6 @@ dependencies:
   - warp
   - http-types
   - text
-  - utf8-string
   - either
   - transformers
   - bytestring-conversion
