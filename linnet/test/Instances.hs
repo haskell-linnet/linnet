@@ -271,15 +271,6 @@ instance Arbitrary a => Arbitrary (Output a) where
 instance (Arbitrary a, MC.MonadCatch m) => Arbitrary (Endpoint m a) where
   arbitrary = oneof [genEndpoint, genErrorEndpoint, genConstEndpoint, genEmptyEndpoint]
 
-instance (Eq a) => Eq (Payload a) where
-  (==) (Payload a) (Payload b) = a == b
-  (==) NoPayload NoPayload = True
-  (==) (ErrorPayload ea) (ErrorPayload eb) = show (toException ea) == show (toException eb)
-  (==) _ _ = False
-
-instance (Eq a) => Eq (Output a) where
-  (==) (Output sa pa ha) (Output sb pb hb) = sa == sb && pa == pb && ha == hb
-
 instance Eq Input where
   (==) i i' = reminder i == reminder i' && request i == request i'
 
