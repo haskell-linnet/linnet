@@ -60,6 +60,7 @@ data Output a =
     , outputPayload :: Payload a
     , outputHeaders :: [Header]
     }
+  deriving (Eq)
 
 -- | Payload of 'Output' that could be:
 data Payload a
@@ -67,6 +68,12 @@ data Payload a
   | NoPayload -- ^ Represents empty response
   | forall e. Exception e =>
               ErrorPayload e -- ^ Failed payload with an exception inside
+
+instance (Eq a) => Eq (Payload a) where
+  (==) (Payload a) (Payload b)            = a == b
+  (==) NoPayload NoPayload                = True
+  (==) (ErrorPayload e) (ErrorPayload e') = show e == show e'
+  (==) _ _                                = False
 
 deriving instance (Show a) => Show (Payload a)
 

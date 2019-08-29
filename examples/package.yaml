@@ -1,0 +1,67 @@
+name:                linnet-examples
+version:             0.1.0.1
+github:              haskell-linnet/linnet
+license:             Apache
+author:              Sergey Kolbasov
+maintainer:          whoisliar@gmail.com
+copyright:           2019 Sergey Kolbasov
+category:            linnet
+synopsis:            Linnet examples
+
+extra-source-files:
+  - README.md
+  - LICENSE
+
+description:         Please see the documentation at <http://linnet.io>
+
+dependencies:
+  - base >= 4.7 && < 5
+  - io-streams
+  - bytestring
+  - wai
+  - warp
+  - http-types
+  - text
+  - either
+  - transformers
+  - bytestring-conversion
+  - case-insensitive
+  - exceptions
+  - mtl
+  - linnet
+  - linnet-aeson
+  - aeson
+  - containers
+  - co-log
+
+executables:
+  hello-world:
+    main:              Main.hs
+    source-dirs:       hello-world
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - linnet-examples
+  todo-list:
+    main:              Main.hs
+    source-dirs:       todo-list
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - linnet-examples
+  middleware:
+    main:              Main.hs
+    source-dirs:       middleware
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - linnet-examples
+
+library:
+  source-dirs: src

@@ -3,5 +3,6 @@ resolver: lts-14.2
 packages:
 - linnet
 - linnet-aeson
+- examples
 
 pvp-bounds: lower
