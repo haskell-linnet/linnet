@@ -1,5 +1,5 @@
 name:                linnet-aeson
-version:             0.1.0.1
+version:             0.1.0.2
 github:              haskell-linnet/linnet-aeson
 license:             Apache
 author:              Sergey Kolbasov
