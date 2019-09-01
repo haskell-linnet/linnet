@@ -1,0 +1,69 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: fad7a82f084b8c04b5ff77966c4b3f9c0e6f55bc8fe20e192a067ad86edb5777
+
+name:           linnet-conduit
+version:        0.1.0.3
+synopsis:       Conduit-backed support for streaming in Linnet
+description:    Please see the documentation at <http://linnet.io>
+category:       linnet
+homepage:       https://github.com/haskell-linnet/linnet#readme
+bug-reports:    https://github.com/haskell-linnet/linnet/issues
+author:         Sergey Kolbasov
+maintainer:     whoisliar@gmail.com
+copyright:      2019 Sergey Kolbasov
+license:        Apache
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    LICENSE
+
+source-repository head
+  type: git
+  location: https://github.com/haskell-linnet/linnet
+
+library
+  exposed-modules:
+      Linnet.Conduit
+  other-modules:
+      Paths_linnet_conduit
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , bytestring
+    , conduit
+    , http-types
+    , linnet >=0.1.0.3
+    , wai
+    , warp
+  default-language: Haskell2010
+
+test-suite linnet-conduit-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      ConduitSpec
+      Paths_linnet_conduit
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      QuickCheck
+    , base >=4.7 && <5
+    , bytestring
+    , conduit
+    , hspec
+    , http-types
+    , linnet >=0.1.0.3
+    , linnet-conduit
+    , quickcheck-classes
+    , quickcheck-instances
+    , wai
+    , warp
+  default-language: Haskell2010

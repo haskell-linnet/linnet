@@ -26,7 +26,7 @@ import Network.Wai (Response, responseLBS)
 class ToResponse (ct :: Symbol) a where
   toResponse :: a -> Response
 
-instance (ToResponse' (ValueT a) ct a) => ToResponse ct a where
+instance {-# OVERLAPPABLE #-} (ToResponse' (ValueT a) ct a) => ToResponse ct a where
   toResponse = toResponse' @(ValueT a) @ct
 
 class ToResponse' (value :: Value) (ct :: Symbol) a where

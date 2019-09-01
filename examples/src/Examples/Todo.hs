@@ -6,11 +6,8 @@ module Examples.Todo
   ( Todo(..)
   ) where
 
-import           Data.Maybe    (maybe)
-import           Data.Text     (Text)
-
 import           Data.Aeson
-import           Data.Function ((&))
+import           Data.Text  (Text)
 
 data Todo =
   Todo
@@ -23,7 +20,7 @@ data Todo =
 patch :: Maybe Text -> Maybe Bool -> Todo -> Todo
 patch maybeText maybeCompleted todo =
   case (maybeText, maybeCompleted) of
-    (Just title, maybeCompleted) -> patch Nothing maybeCompleted $ todo {todoTitle = title}
+    (Just t, mc) -> patch Nothing mc $ todo {todoTitle = t}
     (_, Just completed) -> todo {todoCompleted = completed}
     _ -> todo
 

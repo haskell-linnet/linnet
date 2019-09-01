@@ -30,7 +30,7 @@ endpoint :: Endpoint IO Text
 endpoint = get(pathEmpty) ~>> (return . ok $ "Hello, world")
 
 app :: Application
-app = bootstrap @TextPlain endpoint & compile & toApp id
+app = bootstrap @TextPlain endpoint & compile & toApp
 ```
 
 Linnet re-exports Warp's `run` function to run WAI application:
@@ -65,7 +65,7 @@ multipleContentTypesApp =
   bootstrap @TextPlain endpoint &
   serve @TextHtml indexHtml &
   compile &
-  toApp id
+  toApp
 ```
 
 ## Custom monad
@@ -73,9 +73,10 @@ multipleContentTypesApp =
 Last step of converting `Endpoint` into `Application` is to call function `toApp` that has a following signature:
 
 ```haskell
-toApp :: (forall a. m a -> IO a) -> ReaderT Request m Response -> Application
+toApp :: (NaturalTransformation m IO) => ReaderT Request m Response -> Application
 ```
 
-The first argument is a natural transformation `m ~> IO` and the second is compiled `ReaderT`.
+The constraint exposed is a natural transformation `m ~> IO` to "run" custom monad as `IO`.
 It allows to use custom monad until the very end of request resolution and could be useful to run logger,
-create request-local context etc. This example demonstrates how to make it work.
+create request-local context etc.  
+[This example](https://github.com/haskell-linnet/linnet/blob/master/examples/src/Examples/Middleware.hs) demonstrates how to make it work.

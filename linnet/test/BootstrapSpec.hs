@@ -71,7 +71,7 @@ spec = do
   it "compiles into WAI application" $
     property $ \(out :: (Output T.Text)) ->
       monadicIO $ do
-        let app = bootstrap @TextPlain (liftOutputM (return out)) & compile & toApp id
+        let app = bootstrap @TextPlain (liftOutputM (return out)) & compile & toApp @IO
         mvar <- liftIO newEmptyMVar
         let callback req = ResponseReceived <$ putMVar mvar req
         _ <- liftIO $ app defaultRequest callback

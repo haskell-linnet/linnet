@@ -1,4 +1,4 @@
-name:                linnet
+name:                linnet-conduit
 version:             0.1.0.3
 github:              haskell-linnet/linnet
 license:             Apache
@@ -6,7 +6,7 @@ author:              Sergey Kolbasov
 maintainer:          whoisliar@gmail.com
 copyright:           2019 Sergey Kolbasov
 category:            linnet
-synopsis:            Lightweight library for building HTTP API
+synopsis:            Conduit-backed support for streaming in Linnet
 
 extra-source-files:
   - README.md
@@ -20,20 +20,14 @@ dependencies:
   - wai
   - warp
   - http-types
-  - text
-  - either
-  - transformers
-  - bytestring-conversion
-  - case-insensitive
-  - exceptions
-  - uri-encode
-  - mtl
+  - conduit
+  - linnet >= 0.1.0.3
 
 library:
   source-dirs: src
 
 tests:
-  linnet-test:
+  linnet-conduit-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -41,7 +35,7 @@ tests:
       - -rtsopts
       - -with-rtsopts=-N
     dependencies:
-      - linnet
+      - linnet-conduit
       - hspec
       - QuickCheck
       - quickcheck-instances

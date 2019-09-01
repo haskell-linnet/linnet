@@ -68,5 +68,5 @@ compiled = bootstrap @TextPlain failedEndpoint & compile
 handled = compiled & Catch.handleAll (return . toResponse @TextPlain)
 
 -- now compile it into WAI application
-app = toApp id handled
+app = toApp handled
 ```
