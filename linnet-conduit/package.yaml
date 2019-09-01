@@ -1,5 +1,5 @@
 name:                linnet-conduit
-version:             0.1.0.3
+version:             0.2.0.0
 github:              haskell-linnet/linnet
 license:             Apache
 author:              Sergey Kolbasov
@@ -21,7 +21,7 @@ dependencies:
   - warp
   - http-types
   - conduit
-  - linnet >= 0.1.0.3
+  - linnet
 
 library:
   source-dirs: src
