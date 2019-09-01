@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -19,7 +18,7 @@ import GHC.Base (Symbol)
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import Linnet.Encode (Encode(..))
 import Linnet.Internal.Coproduct (CNil, Coproduct(..))
-import Network.HTTP.Types (status200, status404)
+import Network.HTTP.Types (hContentType, status200, status404)
 import Network.Wai (Response, responseLBS)
 
 -- | Type-class to convert a value of type @a@ into Response with Content-Type of @ct@
@@ -52,7 +51,7 @@ mkResponse ::
      forall ct. (KnownSymbol ct)
   => BL.ByteString
   -> Response
-mkResponse = responseLBS status200 [("Content-Type", C8.pack $ symbolVal (Proxy :: Proxy ct))]
+mkResponse = responseLBS status200 [(hContentType, C8.pack $ symbolVal (Proxy :: Proxy ct))]
 
 data Value
   = Value

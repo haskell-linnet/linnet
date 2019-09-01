@@ -49,7 +49,7 @@ body =
     { runEndpoint =
         \input ->
           case (requestBodyLength . request) input of
-            ChunkedBody -> NotMatched
+            ChunkedBody -> NotMatched Other
             KnownLength 0 -> Matched {matchedReminder = input, matchedOutput = throwM $ MissingEntity Body}
             KnownLength _ ->
               Matched
@@ -71,7 +71,7 @@ bodyMaybe =
     { runEndpoint =
         \input ->
           case (requestBodyLength . request) input of
-            ChunkedBody -> NotMatched
+            ChunkedBody -> NotMatched Other
             KnownLength 0 -> Matched {matchedReminder = input, matchedOutput = pure $ ok Nothing}
             KnownLength _ ->
               Matched

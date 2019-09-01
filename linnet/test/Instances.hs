@@ -282,7 +282,7 @@ instance Eq Request where
 
 instance Eq (m (Output a)) => Eq (EndpointResult m a) where
   (==) (Matched i m) (Matched i' m') = i == i' && m == m'
-  (==) NotMatched NotMatched         = True
+  (==) (NotMatched r) (NotMatched r')         = r == r'
   (==) _ _                           = False
 
 instance Eq (m (Output a)) => Eq (Endpoint m a) where

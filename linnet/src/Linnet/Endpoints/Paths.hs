@@ -33,11 +33,11 @@ path =
     { runEndpoint =
         \input ->
           case reminder input of
-            [] -> NotMatched
+            [] -> NotMatched Other
             (h:t) ->
               case decodePath h of
                 Just v -> Matched {matchedReminder = input {reminder = t}, matchedOutput = pure $ ok v}
-                Nothing -> NotMatched
+                Nothing -> NotMatched Other
     , toString = show (typeRep (Proxy :: Proxy a))
     }
 
@@ -53,11 +53,11 @@ pathConst value =
     { runEndpoint =
         \input ->
           case reminder input of
-            [] -> NotMatched
+            [] -> NotMatched Other
             (h:t) ->
               if h == value
                 then Matched {matchedReminder = input {reminder = t}, matchedOutput = pure $ ok HNil}
-                else NotMatched
+                else NotMatched Other
     , toString = T.unpack value
     }
 
@@ -73,7 +73,7 @@ pathEmpty =
         \input ->
           case reminder input of
             [] -> Matched input (pure . ok $ HNil)
-            _  -> NotMatched
+            _  -> NotMatched Other
     , toString = "/"
     }
 

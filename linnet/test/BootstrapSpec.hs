@@ -6,26 +6,28 @@ module BootstrapSpec where
 
 import           Test.Hspec
 
-import           Control.Concurrent      (newEmptyMVar, putMVar, takeMVar)
-import           Control.Monad.Catch     (throwM)
-import           Control.Monad.IO.Class  (liftIO)
-import           Control.Monad.Reader    (ReaderT (..))
-import qualified Data.CaseInsensitive    as CI
-import           Data.Function           ((&))
-import           Data.Functor.Identity   (runIdentity)
-import qualified Data.Text               as T
+import           Control.Concurrent        (newEmptyMVar, putMVar, takeMVar)
+import           Control.Monad.Catch       (throwM)
+import           Control.Monad.IO.Class    (liftIO)
+import           Control.Monad.Reader      (ReaderT (..))
+import qualified Data.CaseInsensitive      as CI
+import           Data.Function             ((&))
+import           Data.Functor.Identity     (runIdentity)
+import qualified Data.Text                 as T
 import           Instances
 import           Linnet
 import           Linnet.Bootstrap
 import           Linnet.Endpoint
 import           Linnet.Errors
 import           Linnet.Output
-import           Network.HTTP.Types      (status400, status404)
-import           Network.Wai             (defaultRequest, pathInfo,
-                                          responseHeaders, responseStatus)
-import           Network.Wai.Internal    (ResponseReceived (..))
-import           Test.QuickCheck         (property)
-import           Test.QuickCheck.Monadic (assert, monadicIO)
+import           Network.HTTP.Types        (methodPost, status400, status404,
+                                            status405)
+import           Network.HTTP.Types.Header (hAllow)
+import           Network.Wai               (defaultRequest, pathInfo,
+                                            responseHeaders, responseStatus)
+import           Network.Wai.Internal      (ResponseReceived (..))
+import           Test.QuickCheck           (property)
+import           Test.QuickCheck.Monadic   (assert, monadicIO)
 
 spec :: Spec
 spec = do
@@ -42,19 +44,20 @@ spec = do
         result <- liftIO $ runReaderT readerT defaultRequest
         let maybeContentType = lookup (CI.mk "Content-Type") (responseHeaders result)
         assert (maybeContentType == Just "text/plain")
-  it "responds with 404" $
-    property $ \(out :: (Output T.Text)) ->
-      monadicIO $ do
-        let readerT = bootstrap @TextPlain (p' "foo" ~>> (return . ok $ ("text" :: T.Text))) & compile
-        result <- liftIO $ runReaderT readerT defaultRequest
-        assert (responseStatus result == status404)
-  it "responds with 400 on LinnetError" $
-    property $ \(out :: (Output T.Text)) ->
-      monadicIO $ do
-        let endpoint = liftOutputM (throwM $ DecodeError "oops") :: Endpoint IO T.Text
-        let readerT = bootstrap @TextPlain endpoint & compile
-        result <- liftIO $ runReaderT readerT defaultRequest
-        assert (responseStatus result == status400)
+  it "responds with 404" $ do
+    let readerT = bootstrap @TextPlain (get (p' "foo") ~>> (return . ok $ ("text" :: T.Text))) & compile
+    result <- liftIO $ runReaderT readerT defaultRequest
+    responseStatus result `shouldBe` status404
+  it "responds with 400 on LinnetError" $ do
+    let endpoint = liftOutputM (throwM $ DecodeError "oops") :: Endpoint IO T.Text
+    let readerT = bootstrap @TextPlain endpoint & compile
+    result <- runReaderT readerT defaultRequest
+    responseStatus result `shouldBe` status400
+  it "responds with 405 on method mismatch" $ do
+    let readerT = bootstrap @TextPlain (post (p' "foo") ~>> (return . ok $ ("text" :: T.Text))) & compile
+    result <- runReaderT readerT defaultRequest {pathInfo = ["foo"]}
+    responseStatus result `shouldBe` status405
+    responseHeaders result `shouldBe` [(hAllow, methodPost)]
   it "serves different content-types" $
     property $ \(out :: (Output T.Text)) ->
       monadicIO $ do

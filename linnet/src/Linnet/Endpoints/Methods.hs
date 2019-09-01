@@ -20,9 +20,12 @@ methodEndpoint method underlying =
   Endpoint
     { runEndpoint =
         \input ->
-          if (requestMethod . request) input == method
-            then runEndpoint underlying input
-            else NotMatched
+          let result = runEndpoint underlying input
+           in if (requestMethod . request) input == method
+                then result
+                else case result of
+                       Matched _ _ -> NotMatched (MethodNotAllowed method)
+                       skipped     -> skipped
     , toString = show method ++ " " ++ toString underlying
     }
 
