@@ -1,10 +1,7 @@
 resolver: lts-14.3
 packages:
   - .
-
 extra-deps:
   - ../linnet
-  - ../linnet-aeson
-  - ../linnet-conduit
 
 pvp-bounds: lower

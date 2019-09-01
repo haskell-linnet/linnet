@@ -1,5 +1,5 @@
 name:                linnet-examples
-version:             0.1.0.2
+version:             0.2.0.0
 github:              haskell-linnet/linnet
 license:             Apache
 author:              Sergey Kolbasov
@@ -30,8 +30,10 @@ dependencies:
   - mtl
   - linnet
   - linnet-aeson
+  - linnet-conduit
   - aeson
   - containers
+  - conduit
   - co-log
 
 executables:
@@ -56,6 +58,15 @@ executables:
   middleware:
     main:              Main.hs
     source-dirs:       middleware
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - linnet-examples
+  streaming:
+    main:              Main.hs
+    source-dirs:       streaming
     ghc-options:
       - -threaded
       - -rtsopts

@@ -24,7 +24,7 @@ import           Linnet.Errors
 import           Linnet.Input
 import           Linnet.Output
 import           Network.Wai             (RequestBodyLength (..),
-                                          lazyRequestBody, requestBodyLength)
+                                          requestBodyLength, strictRequestBody)
 
 decodeBody ::
      forall ct a m. (Decode ct a, MonadThrow m)
@@ -54,7 +54,7 @@ body =
             KnownLength _ ->
               Matched
                 { matchedReminder = input
-                , matchedOutput = (liftIO . lazyRequestBody . request) input >>= decodeBody @ct @a
+                , matchedOutput = (liftIO . strictRequestBody . request) input >>= decodeBody @ct @a
                 }
     , toString = "body"
     }
@@ -76,7 +76,8 @@ bodyMaybe =
             KnownLength _ ->
               Matched
                 { matchedReminder = input
-                , matchedOutput = (fmap . fmap) Just ((liftIO . lazyRequestBody . request) input >>= decodeBody @ct @a)
+                , matchedOutput =
+                    (fmap . fmap) Just ((liftIO . strictRequestBody . request) input >>= decodeBody @ct @a)
                 }
     , toString = "bodyMaybe"
     }

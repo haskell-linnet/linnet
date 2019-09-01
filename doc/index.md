@@ -36,7 +36,7 @@ helloName = get(p' "hello" // path @Text) ~>>
                (\name -> return $ ok ("Hello, " `append` name))
 
 app :: Application
-app = bootstrap @TextPlain helloName & compile & toApp id
+app = bootstrap @TextPlain helloName & compile & toApp
 ```
 
 To run the application using re-imported [Warp](http://hackage.haskell.org/package/warp-3.3.0/docs/Network-Wai-Handler-Warp.html#v:run):

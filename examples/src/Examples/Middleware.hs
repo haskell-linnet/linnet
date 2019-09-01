@@ -10,25 +10,24 @@ module Examples.Middleware
   ( app
   ) where
 
-import           Colog                     (HasLog (..), LogAction, Message,
-                                            WithLog, cmap, fmtMessage, logInfo,
-                                            logTextStdout, richMessageAction,
-                                            usingLoggerT)
-import           Control.Exception         (SomeException)
-import           Control.Monad.Catch       (MonadCatch, MonadThrow)
-import           Control.Monad.Fail        (MonadFail)
-import           Control.Monad.IO.Class    (MonadIO)
-import           Control.Monad.Reader      (MonadReader (..), ReaderT (..))
-import           Data.ByteString           (ByteString)
-import qualified Data.CaseInsensitive      as CI
-import           Data.Function             ((&))
-import           Data.Text                 (Text, append, pack)
-import           Data.Text.Encoding        (decodeUtf8)
+import           Colog                        (HasLog (..), LogAction, Message,
+                                               WithLog, cmap, fmtMessage,
+                                               logInfo, logTextStdout)
+import           Control.Exception            (SomeException)
+import           Control.Monad.Catch          (MonadCatch, MonadThrow)
+import           Control.Monad.Fail           (MonadFail)
+import           Control.Monad.IO.Class       (MonadIO)
+import           Control.Monad.Reader         (MonadReader (..), ReaderT (..))
+import           Data.ByteString              (ByteString)
+import qualified Data.CaseInsensitive         as CI
+import           Data.Function                ((&))
+import           Data.Text                    (Text, append, pack)
+import           Data.Text.Encoding           (decodeUtf8)
 import           Linnet
-import           Network.HTTP.Types.Status (unauthorized401)
-import           Network.Wai               (Application, Request (..), Response,
-                                            responseLBS)
-import           Network.Wai.Handler.Warp  (run)
+import           Linnet.NaturalTransformation (NaturalTransformation (..))
+import           Network.HTTP.Types.Status    (unauthorized401)
+import           Network.Wai                  (Application, Request (..),
+                                               Response, responseLBS)
 
 instance Encode TextPlain SomeException where
   encode _ = mempty
@@ -58,7 +57,7 @@ helloWorld =
      return $ ok ("Hello, " `append` name `append` ". Your secret is: " `append` decodeUtf8 key))
 
 app :: Application
-app = bootstrap @TextPlain helloWorld & compile & filters & toApp (\m -> runReaderT (unReq m) emptyRequestEnv)
+app = bootstrap @TextPlain helloWorld & compile & filters & toApp @Req
   where
     filters = logging . auth -- execution order is inversed here, as the auth middleware is called inside of logging middleware
 
@@ -86,6 +85,9 @@ newtype Req a =
     { unReq :: ReaderT (RequestEnv Req) IO a
     }
   deriving (Functor, Applicative, Monad, MonadIO, MonadReader (RequestEnv Req), MonadThrow, MonadCatch, MonadFail)
+
+instance NaturalTransformation Req IO where
+  mapK req = runReaderT (unReq req) emptyRequestEnv
 
 instance HasLog (RequestEnv m) Message m where
   getLogAction = requestLogAction
