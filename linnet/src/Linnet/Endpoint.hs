@@ -10,6 +10,7 @@
 module Linnet.Endpoint
   ( EndpointResult(..)
   , Endpoint(..)
+  , NotMatchedReason(..)
   , isMatched
   , maybeReminder
   , lift
@@ -40,6 +41,7 @@ import           Linnet.Input
 import           Linnet.Internal.Coproduct
 import           Linnet.Internal.HList
 import           Linnet.Output
+import           Network.HTTP.Types        (Method)
 import           Network.Wai               (Request)
 
 infixl 0 ~>
@@ -61,6 +63,15 @@ data EndpointResult (m :: * -> *) a
       , matchedOutput   :: m (Output a)
       }
   | NotMatched
+      { reason :: NotMatchedReason
+      }
+
+data NotMatchedReason
+  = MethodNotAllowed
+      { allowedMethod :: Method
+      }
+  | Other
+  deriving (Show, Eq)
 
 isMatched :: EndpointResult m a -> Bool
 isMatched (Matched _ _) = True
@@ -72,11 +83,11 @@ maybeReminder _             = Nothing
 
 instance (Show (m (Output a))) => Show (EndpointResult m a) where
   show (Matched _ out) = "EndpointResult.Matched(" ++ show out ++ ")"
-  show NotMatched      = "EndpointResult.NotMatched"
+  show (NotMatched r)  = "EndpointResult.NotMatched(" ++ show r ++ ")"
 
 instance (Functor m) => Functor (EndpointResult m) where
-  fmap f (Matched r m) = Matched r $ (fmap . fmap) f m
-  fmap _ NotMatched    = NotMatched
+  fmap f (Matched r m)  = Matched r $ (fmap . fmap) f m
+  fmap _ (NotMatched r) = NotMatched r
 
 -- | Basic Linnet data type that abstracts away operations over HTTP communication.
 -- While WAI Application has type of @Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived@,
@@ -126,7 +137,7 @@ instance (MC.MonadCatch m) => Applicative (Endpoint m) where
   liftA2 fn fa fb = productWith fa fb fn
 
 instance (MC.MonadCatch m) => Alternative (Endpoint m) where
-  empty = Endpoint {runEndpoint = const NotMatched, toString = "empty"}
+  empty = Endpoint {runEndpoint = const $ NotMatched Other, toString = "empty"}
   (<|>) ea eb =
     Endpoint
       { runEndpoint =
@@ -138,8 +149,8 @@ instance (MC.MonadCatch m) => Alternative (Endpoint m) where
                     if length (reminder remA) <= length (reminder remB)
                       then a
                       else b
-                  NotMatched -> a
-              NotMatched -> runEndpoint eb input
+                  NotMatched _ -> a
+              NotMatched _ -> runEndpoint eb input
       , toString = toString ea ++ "<|>" ++ toString eb
       }
 
@@ -159,7 +170,7 @@ mapOutputM fn ea =
         \input ->
           case runEndpoint ea input of
             Matched remA ma -> Matched remA $ ma >>= transformM fn
-            NotMatched      -> NotMatched
+            NotMatched r    -> NotMatched r
     }
 
 transformOutput :: (m (Output a) -> m (Output b)) -> Endpoint m a -> Endpoint m b
@@ -169,7 +180,7 @@ transformOutput fn ea =
         \input ->
           case runEndpoint ea input of
             Matched remA ma -> Matched remA $ fn ma
-            NotMatched      -> NotMatched
+            NotMatched r    -> NotMatched r
     }
 
 transform :: (Monad m) => (m a -> m b) -> Endpoint m a -> Endpoint m b
@@ -179,7 +190,7 @@ transform fn ea =
         \input ->
           case runEndpoint ea input of
             Matched remA ma -> Matched {matchedReminder = remA, matchedOutput = ma >>= traverse (fn . pure)}
-            NotMatched -> NotMatched
+            NotMatched r -> NotMatched r
     }
 
 -- | Handle exception in monad @m@ of Endpoint result using provided function that returns new 'Output'
@@ -201,7 +212,7 @@ try ea =
               traverseEither (Right out) = Right <$> out
            in case runEndpoint ea input of
                 Matched remA out -> Matched {matchedReminder = remA, matchedOutput = traverseEither <$> MC.try out}
-                NotMatched -> NotMatched
+                NotMatched r -> NotMatched r
     }
 
 -- | Inversed alias for 'mapOutputM'
@@ -243,8 +254,8 @@ productWith ea eb f =
                         ob <- MC.try bOutM
                         product_ oa ob
                    in Matched bRem out
-                NotMatched -> NotMatched
-            NotMatched -> NotMatched
+                NotMatched r -> NotMatched r
+            NotMatched r -> NotMatched r
     }
   where
     product_ :: Either LinnetError (Output a) -> Either LinnetError (Output b) -> m (Output c)

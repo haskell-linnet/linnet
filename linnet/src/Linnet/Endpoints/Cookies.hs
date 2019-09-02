@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Linnet.Endpoints.Cookies
@@ -10,13 +9,13 @@ module Linnet.Endpoints.Cookies
 import           Control.Monad.Catch     (MonadThrow, throwM)
 import qualified Data.ByteString         as B
 import qualified Data.ByteString.Char8   as C8
-import qualified Data.CaseInsensitive    as CI
 import           Linnet.Decode
 import           Linnet.Endpoint
 import           Linnet.Endpoints.Entity
 import           Linnet.Errors
 import           Linnet.Input
 import           Linnet.Output
+import           Network.HTTP.Types      (hCookie)
 import           Network.URI.Encode      (decodeByteString)
 import           Network.Wai             (requestHeaders)
 
@@ -43,7 +42,7 @@ cookie name =
   Endpoint
     { runEndpoint =
         \input ->
-          let maybeCookie = (lookup (CI.mk "Cookie") . requestHeaders . request) input >>= findCookie name
+          let maybeCookie = (lookup hCookie . requestHeaders . request) input >>= findCookie name
               output =
                 case maybeCookie of
                   Just val ->
@@ -69,7 +68,7 @@ cookieMaybe name =
   Endpoint
     { runEndpoint =
         \input ->
-          let maybeCookie = (lookup (CI.mk "Cookie") . requestHeaders . request) input >>= findCookie name
+          let maybeCookie = (lookup hCookie . requestHeaders . request) input >>= findCookie name
               output =
                 case maybeCookie of
                   Just val ->

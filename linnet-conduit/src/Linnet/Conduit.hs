@@ -33,7 +33,7 @@ import           Data.Data                    (Proxy (..))
 import           Data.Void                    (Void)
 import           GHC.TypeLits                 (KnownSymbol, symbolVal)
 import           Linnet
-import           Linnet.Endpoint              (EndpointResult (..))
+import           Linnet.Endpoint              (EndpointResult (..), NotMatchedReason(..))
 import           Linnet.Input                 (request)
 import           Linnet.NaturalTransformation (NaturalTransformation (..))
 import           Linnet.ToResponse
@@ -67,7 +67,7 @@ streamBody =
                         do liftIO $ pauseTimeout req
                            pure $ ok $ (fromLazyBody . lazyRequestBody) req
                     }
-                KnownLength _ -> NotMatched
+                KnownLength _ -> NotMatched Other
     , toString = "streamBody"
     }
 
