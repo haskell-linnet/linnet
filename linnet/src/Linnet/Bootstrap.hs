@@ -58,16 +58,11 @@ compile (Bootstrap e) = Compile.compile @cts @m e
 
 -- | Convert @ReaderT Request m Response@ into WAI @Application@
 --
--- > bootstrap @TextPlain (pure "foo") & compile & toApp id
+-- > bootstrap @TextPlain (pure "foo") & compile & toApp @IO
 --
--- The first parameter here is a natural transformation of 'Endpoint's monad @m@ into @IO@.
--- In case if selected monad is @IO@ already then @id@ is just enough. Otherwise, it's a good place to define how to "start"
--- custom monad for each request to come and convert it to @IO@.
---
--- As an example:
---
---  * @ReaderT RequestContext IO@ could be used to pass some data as local context for the request.
---
---  * Some monad for logging (i.e. co-log)
+-- The constraint here is a natural transformation of 'Endpoint's monad @m@ into @IO@.
+-- In case if selected monad is @IO@ already then provided instance is just enough.
+-- Otherwise, it's necessary define how to "start" custom monad for each request to come and convert it to @IO@ as the
+-- instance of 'NaturalTransformation' @m IO@.
 toApp :: forall m . (NaturalTransformation m IO) => ReaderT Request m Response -> Application
 toApp !readerT request callback = mapK (runReaderT readerT request) >>= callback
