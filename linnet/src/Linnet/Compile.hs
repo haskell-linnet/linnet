@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -8,6 +9,7 @@
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
@@ -16,12 +18,12 @@ module Linnet.Compile
   ) where
 
 import           Control.Exception         (SomeException)
+import           Control.Monad             (join, (>=>))
 import           Control.Monad.Catch       (MonadCatch)
 import           Control.Monad.Reader      (ReaderT (..))
 import           Data.ByteString           (intercalate)
-import qualified Data.CaseInsensitive      as CI
-import           Data.Data                 (Proxy)
-import           GHC.TypeLits              (KnownSymbol)
+import           Data.ByteString.Char8     (split)
+import           Data.Maybe                (maybeToList)
 import           Linnet.Endpoint
 import           Linnet.Errors             (LinnetError)
 import           Linnet.Input
@@ -29,12 +31,13 @@ import           Linnet.Internal.Coproduct
 import           Linnet.Internal.HList
 import           Linnet.Output             (Output (..), outputToResponse,
                                             payloadError)
-import           Linnet.ToResponse         (ToResponse)
-import           Network.HTTP.Types        (Method, badRequest400,
-                                            methodNotAllowed405, notFound404,
-                                            status404)
+import           Linnet.ToResponse         (Negotiable (..))
+import           Network.HTTP.Media        (MediaType, parseQuality)
+import           Network.HTTP.Types        (Method, badRequest400, hAccept,
+                                            methodNotAllowed405, notFound404)
 import           Network.HTTP.Types.Header (hAllow)
-import           Network.Wai               (Request, Response, responseLBS)
+import           Network.Wai               (Request, Response, requestHeaders,
+                                            responseLBS)
 
 newtype CompileContext =
   CompileContext
@@ -51,26 +54,35 @@ class Compile' cts m es where
   compile' :: es -> CompileContext -> ReaderT Request m Response
 
 instance (Monad m) => Compile' CNil m (HList '[]) where
-  compile' _ ctx@CompileContext {..} =
+  compile' _ CompileContext {..} =
     ReaderT $
     const
       (if null allowedMethods
          then notFoundResponse
          else methodNotAllowedResponse allowedMethods)
 
-instance (KnownSymbol ct, ToResponse ct a, ToResponse ct SomeException, Compile' cts m (HList es), MonadCatch m) =>
-         Compile' (Coproduct (Proxy ct) cts) m (HList (Endpoint m a ': es)) where
+instance (Negotiable ct a, Negotiable ct SomeException, Negotiable ct (), Compile' cts m (HList es), MonadCatch m) =>
+         Compile' (ct :+: cts) m (HList (Endpoint m a ': es)) where
   compile' (ea ::: es) ctx@CompileContext {..} =
     ReaderT
       (\req ->
-         case runEndpoint (handle respond400 ea) (inputFromRequest req) of
-           Matched _ mo -> outputToResponse @a @ct <$> mo
-           NotMatched r ->
-             let newContext =
-                   case r of
-                     MethodNotAllowed allowed -> ctx {allowedMethods = allowed : allowedMethods}
-                     Other -> ctx
-              in runReaderT (compile' @cts es newContext) req)
+         let accept =
+               (maybeToList . lookup hAccept >=> split ',' >=> (join . maybeToList . parseQuality @MediaType)) .
+               requestHeaders $
+               req
+          in case runEndpoint (handle respond400 ea) (inputFromRequest req) of
+               Matched _ mo ->
+                 outputToResponse
+                   (negotiate @ct accept Nothing)
+                   (negotiate @ct accept Nothing)
+                   (negotiate @ct accept Nothing) <$>
+                 mo
+               NotMatched r ->
+                 let newContext =
+                       case r of
+                         MethodNotAllowed allowed -> ctx {allowedMethods = allowed : allowedMethods}
+                         Other -> ctx
+                  in runReaderT (compile' @cts es newContext) req)
 
 notFoundResponse :: (Applicative m) => m Response
 notFoundResponse = pure $ responseLBS notFound404 [] mempty

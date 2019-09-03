@@ -28,7 +28,7 @@ import           Linnet.Errors
 -- | Decoding of HTTP request payload into some type @a@.
 -- Phantom type @ct@ guarantees that compiler checks support of decoding some @a@ from content of given @Content-Type@
 -- by looking for specific @Decode@ instance.
-class Decode (ct :: Symbol) a where
+class Decode ct a where
   decode :: BL.ByteString -> Either LinnetError a
 
 class DecodePath a where

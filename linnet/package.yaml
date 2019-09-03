@@ -28,6 +28,7 @@ dependencies:
   - exceptions
   - uri-encode
   - mtl
+  - http-media
 
 library:
   source-dirs: src

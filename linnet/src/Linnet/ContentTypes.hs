@@ -6,11 +6,13 @@ module Linnet.ContentTypes
   , ApplicationJson
   ) where
 
+import Data.Data (Proxy)
+
 -- | Content-Type literal for @text/html@ encoding
-type TextHtml = "text/html"
+type TextHtml = Proxy "text/html"
 
 -- | Content-Type literal for @text/plain@ encoding
-type TextPlain = "text/plain"
+type TextPlain = Proxy "text/plain"
 
 -- | Content-Type literal for @application/json@ encoding
-type ApplicationJson = "application/json"
+type ApplicationJson = Proxy "application/json"
