@@ -94,6 +94,9 @@ module Linnet
   , ApplicationJson
   , TextHtml
   , TextPlain
+  -- * Content-Type negotiation
+  , NotAcceptable406
+  , (:+:)
   ) where
 
 import           Linnet.Bootstrap
@@ -102,7 +105,9 @@ import           Linnet.Decode
 import           Linnet.Encode
 import           Linnet.Endpoint
 import           Linnet.Endpoints
+import           Linnet.Internal.Coproduct ((:+:))
 import           Linnet.Output
+import           Linnet.ToResponse         (NotAcceptable406)
 import           Network.Wai.Handler.Warp
 -- $helloWorld
 -- Hello @name@ example using warp server:

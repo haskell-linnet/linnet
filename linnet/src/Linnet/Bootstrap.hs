@@ -17,11 +17,9 @@ module Linnet.Bootstrap
   ) where
 
 import           Control.Monad.Reader         (ReaderT (..))
-import           Data.Data                    (Proxy)
-import           GHC.Base                     (Symbol)
 import qualified Linnet.Compile               as Compile
 import           Linnet.Endpoint
-import           Linnet.Internal.Coproduct    (CNil, Coproduct)
+import           Linnet.Internal.Coproduct    ((:+:), CNil)
 import           Linnet.Internal.HList        (HList (..))
 import           Linnet.NaturalTransformation
 import           Network.Wai                  (Application, Request, Response)
@@ -32,19 +30,24 @@ newtype Bootstrap (m :: * -> *) cts es =
 -- | Create 'Bootstrap' out of single 'Endpoint' and some given Content-Type:
 --
 -- > bootstrap @TextPlain (pure "foo")
-bootstrap ::
-     forall (ct :: Symbol) m a. Endpoint m a -> Bootstrap m (Coproduct (Proxy ct) CNil) (HList '[ (Endpoint m a)])
-bootstrap ea = Bootstrap @m @(Coproduct (Proxy ct) CNil) (ea ::: HNil)
+--
+-- To enable Content-Type negotiation based on @Accept@ header, use 'Coproduct' ':+:' type operator to set the type:
+--
+-- > bootstrap @(TextPlain :+: TextHtml) (pure "foo") -- in case of failed negotiation, text/html is picked as the last resort
+-- > bootstrap @(TextPlain :+: TextHtml :+: NotAcceptable406) (pure "foo") -- in case of failed negotiation, 406 is returned
+--
+bootstrap :: forall ct m a. Endpoint m a -> Bootstrap m (ct :+: CNil) (HList '[ (Endpoint m a)])
+bootstrap ea = Bootstrap @m @(ct :+: CNil) (ea ::: HNil)
 
 -- | Add another endpoint to 'Bootstrap' for purpose of serving multiple Content-Types with *different* endpoints
 --
--- > bootstrap @TextPlain (pure "foo") & server @ApplicationJson (pure "bar")
+-- > bootstrap @TextPlain (pure "foo") & serve @ApplicationJson (pure "bar")
 serve ::
-     forall (ct :: Symbol) cts es m a.
+     forall ct cts es m a.
      Endpoint m a
   -> Bootstrap m cts (HList es)
-  -> Bootstrap m (Coproduct (Proxy ct) cts) (HList (Endpoint m a ': es))
-serve ea (Bootstrap e) = Bootstrap @m @(Coproduct (Proxy ct) cts) (ea ::: e)
+  -> Bootstrap m (ct :+: cts) (HList (Endpoint m a ': es))
+serve ea (Bootstrap e) = Bootstrap @m @(ct :+: cts) (ea ::: e)
 
 -- | Compile 'Bootstrap' into @ReaderT Request m Response@ for further combinations.
 -- Might be useful to implement middleware in context of the same monad @m@:
@@ -64,5 +67,8 @@ compile (Bootstrap e) = Compile.compile @cts @m e
 -- In case if selected monad is @IO@ already then provided instance is just enough.
 -- Otherwise, it's necessary define how to "start" custom monad for each request to come and convert it to @IO@ as the
 -- instance of 'NaturalTransformation' @m IO@.
-toApp :: forall m . (NaturalTransformation m IO) => ReaderT Request m Response -> Application
+toApp ::
+     forall m. (NaturalTransformation m IO)
+  => ReaderT Request m Response
+  -> Application
 toApp !readerT request callback = mapK (runReaderT readerT request) >>= callback

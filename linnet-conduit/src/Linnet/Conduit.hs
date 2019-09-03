@@ -73,18 +73,18 @@ streamBody =
 
 instance {-# OVERLAPS #-} (Encode ApplicationJson a, NaturalTransformation m IO, MonadIO m) =>
                           ToResponse ApplicationJson (ConduitT () a m ()) where
-  toResponse stream =
-    responseStream status200 [("Content-Type", "application/json")] $ \write flush ->
+  toResponse status headers stream =
+    responseStream status (("Content-Type", "application/json") : headers) $ \write flush ->
       let push :: ConduitT a Void m ()
           push =
             mapM_C
               (\chunk -> liftIO $ write (Builder.lazyByteString (encode @ApplicationJson chunk)) >> write "\n" >> flush)
        in mapK (runConduit $ stream .| push)
 
-instance {-# OVERLAPS #-} (Encode ct a, KnownSymbol ct, NaturalTransformation m IO, MonadIO m) =>
-                          ToResponse ct (ConduitT () a m ()) where
-  toResponse stream =
-    responseStream status200 [("Content-Type", C8.pack $ symbolVal (Proxy :: Proxy ct))] $ \write flush ->
+instance {-# OVERLAPS #-} (Encode (Proxy ct) a, KnownSymbol ct, NaturalTransformation m IO, MonadIO m) =>
+                          ToResponse (Proxy ct) (ConduitT () a m ()) where
+  toResponse status headers stream =
+    responseStream status (("Content-Type", C8.pack $ symbolVal (Proxy :: Proxy ct)) : headers) $ \write flush ->
       let push :: ConduitT a Void m ()
-          push = mapM_C (\chunk -> liftIO $ write (Builder.lazyByteString (encode @ct chunk)) >> flush)
+          push = mapM_C (\chunk -> liftIO $ write (Builder.lazyByteString (encode @(Proxy ct) chunk)) >> flush)
        in mapK (runConduit $ stream .| push)

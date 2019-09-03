@@ -22,7 +22,7 @@ import           Linnet.ContentTypes
 -- | Encoding of some type @a@ into payload of HTTP response
 -- Phantom type @ct@ guarantees that compiler checks support of encoding of some @a@ into content of given @Content-Type@
 -- by looking for specific @Encode@ instance.
-class Encode (ct :: Symbol) a where
+class Encode ct a where
   encode :: a -> BL.ByteString
 
 instance Encode TextPlain BL.ByteString where

@@ -23,6 +23,7 @@ import           Linnet.Endpoint           (EndpointResult (..), isMatched,
                                             runEndpoint)
 import           Linnet.Input
 import           Linnet.ToResponse
+import           Network.HTTP.Types.Status (ok200)
 import           Network.Wai               (RequestBodyLength (..),
                                             defaultRequest, requestBody,
                                             requestBodyLength, responseStream,
@@ -65,7 +66,7 @@ spec =
            in monadicIO $ do
                 final <- liftIO $ newIORef ([] @BS.ByteString)
                 buffer <- liftIO $ newIORef ([] @BS.ByteString)
-                let response = toResponse @TextPlain $ stream bytes
+                let response = toResponse @TextPlain ok200 [] $ stream bytes
                 let (_, _, responseBody) = responseToStream response
                 let write builder = modifyIORef buffer (++ [BL.toStrict $ Builder.toLazyByteString builder])
                 let flush = do
@@ -82,7 +83,7 @@ spec =
            in monadicIO $ do
                 final <- liftIO $ newIORef ([] @BS.ByteString)
                 buffer <- liftIO $ newIORef ([] @BS.ByteString)
-                let response = toResponse @ApplicationJson $ stream bytes
+                let response = toResponse @ApplicationJson ok200 [] $ stream bytes
                 let (_, _, responseBody) = responseToStream response
                 let write builder = modifyIORef buffer (++ [BL.toStrict $ Builder.toLazyByteString builder])
                 let flush = do
@@ -91,7 +92,11 @@ spec =
                       _ <- modifyIORef buffer (const [])
                       return ()
                 result <- liftIO $ responseBody (\fn -> fn write flush >> readIORef final)
-                assert (result == if null bytes then [] else intersperse "\n" bytes ++ ["\n"])
+                assert
+                  (result ==
+                   if null bytes
+                     then []
+                     else intersperse "\n" bytes ++ ["\n"])
 
 instance Encode ApplicationJson BS.ByteString where
   encode = BL.fromStrict

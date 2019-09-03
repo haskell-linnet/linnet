@@ -8,10 +8,12 @@
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
 module Linnet.Internal.Coproduct
   ( Coproduct(..)
+  , (:+:)
   , CNil
   , AdjoinCoproduct(..)
   ) where
@@ -20,6 +22,11 @@ data CNil
 
 instance Eq CNil where
   (==) _ _ = True
+
+-- | Type operator for 'Coproduct' type 
+type a :+: b = Coproduct a b
+
+infixr 9 :+:
 
 data Coproduct a b where
   Inl :: a -> Coproduct a b

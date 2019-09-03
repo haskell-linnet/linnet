@@ -3,9 +3,9 @@
 {-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE MonoLocalBinds            #-}
 {-# LANGUAGE OverloadedStrings         #-}
+{-# LANGUAGE RecordWildCards           #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE StandaloneDeriving        #-}
-{-# LANGUAGE TypeApplications          #-}
 {-# LANGUAGE UndecidableInstances      #-}
 
 module Linnet.Output
@@ -47,6 +47,7 @@ import           Control.Exception         (Exception, SomeException,
 import           Control.Monad.Catch       (MonadThrow (..))
 import qualified Data.ByteString           as B
 import qualified Data.CaseInsensitive      as CI
+import           Data.Data                 (Proxy)
 import           GHC.TypeLits              (KnownSymbol)
 import           Linnet.ToResponse         (ToResponse (..))
 import           Network.HTTP.Types        (Header)
@@ -236,13 +237,13 @@ payloadEmpty :: Status -> Output a
 payloadEmpty status = Output {outputStatus = status, outputPayload = NoPayload, outputHeaders = []}
 
 outputToResponse ::
-     forall a ct. (KnownSymbol ct, ToResponse ct a, ToResponse ct SomeException)
-  => Output a
+     (Status -> [Header] -> a -> Response)
+  -> (Status -> [Header] -> SomeException -> Response)
+  -> (Status -> [Header] -> () -> Response)
+  -> Output a
   -> Response
-outputToResponse output =
-  let response =
-        case outputPayload output of
-          Payload a      -> toResponse @ct a
-          NoPayload      -> toResponse @ct ()
-          ErrorPayload e -> toResponse @ct $ toException e
-   in (mapResponseStatus (const (outputStatus output)) . mapResponseHeaders (++ outputHeaders output)) response
+outputToResponse tr tre tru Output {..} =
+  case outputPayload of
+    Payload a      -> tr outputStatus outputHeaders a
+    NoPayload      -> tru outputStatus outputHeaders ()
+    ErrorPayload e -> tre outputStatus outputHeaders $ toException e
