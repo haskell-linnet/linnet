@@ -24,7 +24,6 @@ import Control.Exception (SomeException)
 import Data.Function ((&))
 import Data.Text (Text, append)
 import Linnet
-import Network.Wai.Handler.Warp (run)
 
 -- It's necessary to define encoding of exceptions for content-type "text/plain". Here it returns no content
 instance Encode TextPlain SomeException where

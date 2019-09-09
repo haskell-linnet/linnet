@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Util
@@ -22,16 +23,16 @@ headOption []    = Nothing
 headOption (h:t) = Just h
 
 resultOutputUnsafe :: (Applicative m) => EndpointResult m a -> m (Maybe (Output a))
-resultOutputUnsafe (Matched _ m)  = fmap Just m
+resultOutputUnsafe Matched {..}   = fmap Just matchedOutput
 resultOutputUnsafe (NotMatched _) = pure Nothing
 
 resultValueUnsafe :: (Applicative m) => EndpointResult m a -> m (Maybe a)
-resultValueUnsafe (Matched _ m) =
+resultValueUnsafe Matched {..} =
   fmap
     (\case
        Output _ (Payload a) _ -> Just a
        _ -> Nothing)
-    m
+    matchedOutput
 resultValueUnsafe (NotMatched _) = pure Nothing
 
 resultOutputEither :: (MonadCatch m) => EndpointResult m a -> m (Either SomeException (Maybe (Output a)))

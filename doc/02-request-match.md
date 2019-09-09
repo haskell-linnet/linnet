@@ -239,3 +239,8 @@ cookieMaybeEndpoint = get(cookieMaybe @Int "cookieName")
 ```
 
 Mind that `cookieName` is case-sensitive.
+
+# Related topics
+- [Endpoint](01-endpoint.html)
+- [Working with JSON](07-json.html)
+- [Streaming](08-streaming.html)

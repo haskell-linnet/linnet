@@ -16,3 +16,8 @@ import Linnet.Aeson
 
 Usually, it's a place of invocation of `Bodies.bodyJson` for decoding a request
 and `Bootstrap.compile` for encoding a response.
+
+# Related topics
+- [Matching a request](02-request-match.html)
+- [Encode & Decode](04-encode-decode.html)
+- [Run Endpoint](06-run-endpoint.html)

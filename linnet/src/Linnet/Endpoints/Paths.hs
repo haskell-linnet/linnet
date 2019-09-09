@@ -1,4 +1,6 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -19,6 +21,7 @@ import           Linnet.Endpoint
 import           Linnet.Input
 import           Linnet.Internal.HList
 import           Linnet.Output         (ok)
+import           Network.Wai           (pathInfo)
 
 -- | Endpoint that tries to decode head of the current path reminder into specific type. It consumes head of the reminder.
 --
@@ -36,10 +39,13 @@ path =
             [] -> NotMatched Other
             (h:t) ->
               case decodePath h of
-                Just v -> Matched {matchedReminder = input {reminder = t}, matchedOutput = pure $ ok v}
+                Just v ->
+                  Matched {matchedReminder = input {reminder = t}, matchedTrace = [str], matchedOutput = pure $ ok v}
                 Nothing -> NotMatched Other
-    , toString = show (typeRep (Proxy :: Proxy a))
+    , toString = str
     }
+  where
+    str = T.pack $ show (typeRep (Proxy :: Proxy a))
 
 -- | Endpoint that matches only if the head of current path reminder is equal to some given constant value.
 -- It consumes head of the reminder.
@@ -56,9 +62,10 @@ pathConst value =
             [] -> NotMatched Other
             (h:t) ->
               if h == value
-                then Matched {matchedReminder = input {reminder = t}, matchedOutput = pure $ ok HNil}
+                then Matched
+                       {matchedReminder = input {reminder = t}, matchedTrace = [h], matchedOutput = pure $ ok HNil}
                 else NotMatched Other
-    , toString = T.unpack value
+    , toString = value
     }
 
 -- | Short alias for pathConst
@@ -72,8 +79,8 @@ pathEmpty =
     { runEndpoint =
         \input ->
           case reminder input of
-            [] -> Matched input (pure . ok $ HNil)
-            _  -> NotMatched Other
+            [] -> Matched {matchedReminder = input, matchedTrace = [], matchedOutput = pure . ok $ HNil}
+            _ -> NotMatched Other
     , toString = "/"
     }
 
@@ -84,18 +91,22 @@ paths ::
 paths =
   Endpoint
     { runEndpoint =
-        \input ->
+        \input@Input {..} ->
           Matched
             { matchedReminder = input {reminder = []}
-            , matchedOutput = pure $ ok (map (decodePath @a) (reminder input) >>= maybeToList)
+            , matchedTrace = pathInfo request
+            , matchedOutput = pure $ ok (map (decodePath @a) reminder >>= maybeToList)
             }
-    , toString = "[" ++ show (typeRep (Proxy :: Proxy a)) ++ "]"
+    , toString = "[" `T.append` T.pack (show $ typeRep (Proxy :: Proxy a)) `T.append` "]"
     }
 
 -- | Endpoint that matches any path and discards reminder
 pathAny :: (Applicative m) => Endpoint m (HList '[])
 pathAny =
   Endpoint
-    { runEndpoint = \input -> Matched {matchedReminder = input {reminder = []}, matchedOutput = pure . ok $ HNil}
+    { runEndpoint =
+        \input@Input {..} ->
+          Matched
+            {matchedReminder = input {reminder = []}, matchedTrace = pathInfo request, matchedOutput = pure . ok $ HNil}
     , toString = "*"
     }

@@ -13,6 +13,7 @@ import           Control.Exception         (SomeException, fromException,
 import           Control.Monad.Catch       (throwM)
 import           Control.Monad.IO.Class    (liftIO)
 import qualified Data.ByteString           as B
+import           Data.Data                 (Proxy (..))
 import           Data.Either               (isLeft, lefts)
 import           Data.Function             ((&))
 import           Data.Functor.Identity
@@ -38,11 +39,13 @@ import           Network.HTTP.Types        (methodConnect, methodDelete,
 import           Network.Wai               (requestMethod)
 import           Test.Hspec
 import           Test.QuickCheck           (conjoin, property)
+import           Test.QuickCheck.Classes   (applicativeLaws)
 import           Test.QuickCheck.Monadic   (assert, monadicIO, run)
 import           Util
 
 spec :: Spec
 spec = do
+  checkLaws "Endpoint" $ applicativeLaws (Proxy :: Proxy (Endpoint IO))
   checkLaws "Text" $ extractPathLaws @T.Text
   checkLaws "Int" $ extractPathLaws @Int
   it "supports simple fmap" $

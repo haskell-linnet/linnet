@@ -8,9 +8,10 @@ module BootstrapSpec where
 import           Test.Hspec
 
 import           Control.Concurrent        (newEmptyMVar, putMVar, takeMVar)
-import           Control.Monad.Catch       (throwM)
+import           Control.Monad.Catch       (fromException, throwM)
 import           Control.Monad.IO.Class    (liftIO)
 import           Control.Monad.Reader      (ReaderT (..))
+import           Control.Monad.Writer.Lazy (runWriterT)
 import qualified Data.CaseInsensitive      as CI
 import           Data.Function             ((&))
 import           Data.Functor.Identity     (runIdentity)
@@ -40,27 +41,27 @@ spec = do
     property $ \(out :: (Output T.Text)) ->
       monadicIO $ do
         let readerT = bootstrap @TextPlain (liftOutputM (return out)) & compile
-        result <- liftIO $ runReaderT readerT defaultRequest
+        (Right result, _) <- liftIO $ runWriterT $ runReaderT readerT defaultRequest
         assert (result == outputToResponse (toResponse @TextPlain) (toResponse @TextPlain) (toResponse @TextPlain) out)
   it "responds with corresponding content-type" $
     property $ \(out :: (Output T.Text)) ->
       monadicIO $ do
         let readerT = bootstrap @TextPlain (liftOutputM (return out)) & compile
-        result <- liftIO $ runReaderT readerT defaultRequest
+        (Right result, _) <- liftIO $ runWriterT $runReaderT readerT defaultRequest
         let maybeContentType = lookup (CI.mk "Content-Type") (responseHeaders result)
         assert (maybeContentType == Just "text/plain")
   it "responds with 404" $ do
     let readerT = bootstrap @TextPlain (get (p' "foo") ~>> (return . ok $ ("text" :: T.Text))) & compile
-    result <- liftIO $ runReaderT readerT defaultRequest
+    (Right result, _) <- liftIO $ runWriterT $runReaderT readerT defaultRequest
     responseStatus result `shouldBe` status404
   it "responds with 400 on LinnetError" $ do
     let endpoint = liftOutputM (throwM $ DecodeError "oops") :: Endpoint IO T.Text
     let readerT = bootstrap @TextPlain endpoint & compile
-    result <- runReaderT readerT defaultRequest
+    (Right result, _) <- runWriterT $ runReaderT readerT defaultRequest
     responseStatus result `shouldBe` status400
   it "responds with 405 on method mismatch" $ do
     let readerT = bootstrap @TextPlain (post (p' "foo") ~>> (return . ok $ ("text" :: T.Text))) & compile
-    result <- runReaderT readerT defaultRequest {pathInfo = ["foo"]}
+    (Right result, _) <- runWriterT $ runReaderT readerT defaultRequest {pathInfo = ["foo"]}
     responseStatus result `shouldBe` status405
     responseHeaders result `shouldBe` [(hAllow, methodPost)]
   it "serves different content-types" $
@@ -69,8 +70,8 @@ spec = do
         let text = get (p' "foo") ~>> return out
         let html = get (p' "bar") ~>> return out
         let readerT = bootstrap @TextPlain text & serve @TextHtml html & compile
-        textResult <- liftIO $ runReaderT readerT (defaultRequest {pathInfo = ["foo"]})
-        htmlResult <- liftIO $ runReaderT readerT (defaultRequest {pathInfo = ["bar"]})
+        (Right textResult, _) <- liftIO $ runWriterT $ runReaderT readerT (defaultRequest {pathInfo = ["foo"]})
+        (Right htmlResult, _) <- liftIO $ runWriterT $ runReaderT readerT (defaultRequest {pathInfo = ["bar"]})
         let maybeTextContentType = lookup hContentType (responseHeaders textResult)
         let maybeHtmlContentType = lookup hContentType (responseHeaders htmlResult)
         assert (maybeTextContentType == Just "text/plain")
@@ -80,13 +81,15 @@ spec = do
       monadicIO $ do
         let text = get (p' "foo") ~>> return out
         let readerT = bootstrap @(TextPlain :+: TextHtml :+: NotAcceptable406) text & compile
-        textResult <-
+        (Right textResult, _) <-
           liftIO $
+          runWriterT $
           runReaderT
             readerT
             (defaultRequest {pathInfo = ["foo"], requestHeaders = [(hAccept, "text/plain; q=1.0, text/html; q=0.9")]})
-        htmlResult <-
+        (Right htmlResult, _) <-
           liftIO $
+          runWriterT $
           runReaderT
             readerT
             (defaultRequest {pathInfo = ["foo"], requestHeaders = [(hAccept, "text/plain; q=0.9, text/html; q=1.0")]})
@@ -99,8 +102,9 @@ spec = do
       monadicIO $ do
         let text = get (p' "foo") ~>> return out
         let readerT = bootstrap @(TextPlain :+: TextHtml :+: NotAcceptable406) text & compile
-        textResult <-
+        (Right textResult, _) <-
           liftIO $
+          runWriterT $
           runReaderT readerT (defaultRequest {pathInfo = ["foo"], requestHeaders = [(hAccept, "application/json")]})
         assert (responseStatus textResult == status406)
   it "falls back to the latest option when 406 is disabled" $
@@ -108,8 +112,9 @@ spec = do
       monadicIO $ do
         let text = get (p' "foo") ~>> return out
         let readerT = bootstrap @(TextPlain :+: TextHtml) text & compile
-        htmlResult <-
+        (Right htmlResult, _) <-
           liftIO $
+          runWriterT $
           runReaderT readerT (defaultRequest {pathInfo = ["foo"], requestHeaders = [(hAccept, "application/json")]})
         let maybeHtmlContentType = lookup hContentType (responseHeaders htmlResult)
         assert (maybeHtmlContentType == Just "text/html")
@@ -123,3 +128,8 @@ spec = do
         response <- liftIO $ takeMVar mvar
         assert
           (response == outputToResponse (toResponse @TextPlain) (toResponse @TextPlain) (toResponse @TextPlain) out)
+  it "catches unhandled exception as Left" $ do
+    let error = TestException "test"
+    let readerT = bootstrap @TextPlain (lift (throwM error :: IO Int)) & compile
+    (Left e, _) <- liftIO $ runWriterT $runReaderT readerT defaultRequest
+    fromException e `shouldBe` Just error

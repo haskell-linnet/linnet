@@ -47,9 +47,6 @@ import           Control.Exception         (Exception, SomeException,
 import           Control.Monad.Catch       (MonadThrow (..))
 import qualified Data.ByteString           as B
 import qualified Data.CaseInsensitive      as CI
-import           Data.Data                 (Proxy)
-import           GHC.TypeLits              (KnownSymbol)
-import           Linnet.ToResponse         (ToResponse (..))
 import           Network.HTTP.Types        (Header)
 import           Network.HTTP.Types.Status
 import           Network.Wai
@@ -86,6 +83,7 @@ instance Functor Output where
   fmap _ (Output status NoPayload headers) = Output status NoPayload headers
   fmap _ (Output status (ErrorPayload e) headers) = Output status (ErrorPayload e) headers
 
+-- This applicative isn't lawful due to the HTTP status. There is no logical way to combine two HTTP statuses
 instance Applicative Output where
   pure = ok
   (<*>) (Output _ (Payload f) _) (Output status (Payload a) headers) =
@@ -98,6 +96,7 @@ instance Applicative Output where
   (<*>) _ (Output status (ErrorPayload e) headers) =
     Output {outputStatus = status, outputPayload = ErrorPayload e, outputHeaders = headers}
 
+-- This monad isn't lawful due to the HTTP status. There is no logical way to combine two HTTP statuses
 instance Monad Output where
   (>>=) (Output _ (Payload a) _) f = f a
   (>>=) (Output status NoPayload headers) _ =

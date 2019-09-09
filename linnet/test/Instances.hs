@@ -208,13 +208,15 @@ genErrorEndpoint :: (MC.MonadThrow m) => Gen (Endpoint m a)
 genErrorEndpoint = lift . MC.throwM . TestException <$> arbitrary
 
 genEndpoint ::
-     forall m a. (Arbitrary (Input -> Output a), Monad m)
+     forall m a. (Arbitrary (Input -> a), Monad m)
   => Gen (Endpoint m a)
 genEndpoint = do
-  f <- arbitrary @(Input -> Output a)
+  f <- arbitrary @(Input -> a)
+  trace <- arbitrary
   return $
     Endpoint
-      { runEndpoint = \input -> Matched {matchedReminder = input, matchedOutput = pure $ (f input)}
+      { runEndpoint =
+          \input -> Matched {matchedReminder = input, matchedTrace = trace, matchedOutput = pure (ok $ f input)}
       , toString = "arbitrary"
       }
 
@@ -281,9 +283,9 @@ instance Eq Request where
   (==) r r' = show r == show r'
 
 instance Eq (m (Output a)) => Eq (EndpointResult m a) where
-  (==) (Matched i m) (Matched i' m') = i == i' && m == m'
-  (==) (NotMatched r) (NotMatched r')         = r == r'
-  (==) _ _                           = False
+  (==) (Matched i t m) (Matched i' t' m')  = i == i' && m == m' && t == t'
+  (==) (NotMatched r) (NotMatched r') = r == r'
+  (==) _ _                            = False
 
 instance Eq (m (Output a)) => Eq (Endpoint m a) where
   (==) ea eb = runEndpoint ea input == runEndpoint eb input

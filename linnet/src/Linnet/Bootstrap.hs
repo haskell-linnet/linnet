@@ -16,13 +16,15 @@ module Linnet.Bootstrap
   , toApp
   ) where
 
+import           Control.Monad.Catch          (throwM)
 import           Control.Monad.Reader         (ReaderT (..))
+import           Control.Monad.Writer.Lazy    (runWriterT)
 import qualified Linnet.Compile               as Compile
 import           Linnet.Endpoint
 import           Linnet.Internal.Coproduct    ((:+:), CNil)
 import           Linnet.Internal.HList        (HList (..))
 import           Linnet.NaturalTransformation
-import           Network.Wai                  (Application, Request, Response)
+import           Network.Wai                  (Application)
 
 newtype Bootstrap (m :: * -> *) cts es =
   Bootstrap es
@@ -49,17 +51,17 @@ serve ::
   -> Bootstrap m (ct :+: cts) (HList (Endpoint m a ': es))
 serve ea (Bootstrap e) = Bootstrap @m @(ct :+: cts) (ea ::: e)
 
--- | Compile 'Bootstrap' into @ReaderT Request m Response@ for further combinations.
+-- | Compile 'Bootstrap' into 'Compiled' that is just 'ReaderT' for further combinations.
 -- Might be useful to implement middleware in context of the same monad @m@:
 --
 -- > bootstrap @TextPlain (pure "foo") & compile
 compile ::
      forall cts m es. (Compile.Compile cts m es)
   => Bootstrap m cts es
-  -> ReaderT Request m Response
+  -> Compile.Compiled m
 compile (Bootstrap e) = Compile.compile @cts @m e
 
--- | Convert @ReaderT Request m Response@ into WAI @Application@
+-- | Convert 'Compiled' into WAI @Application@
 --
 -- > bootstrap @TextPlain (pure "foo") & compile & toApp @IO
 --
@@ -69,6 +71,9 @@ compile (Bootstrap e) = Compile.compile @cts @m e
 -- instance of 'NaturalTransformation' @m IO@.
 toApp ::
      forall m. (NaturalTransformation m IO)
-  => ReaderT Request m Response
+  => Compile.Compiled m
   -> Application
-toApp !readerT request callback = mapK (runReaderT readerT request) >>= callback
+toApp !readerT request callback = mapK (runWriterT $ runReaderT readerT request) >>= process . fst
+  where
+    process (Right response) = callback response
+    process (Left err)       = throwM err

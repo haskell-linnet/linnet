@@ -10,7 +10,7 @@ The foundation of Linnet library is `Endpoint` data type:
 data Endpoint (m :: * -> *) a =
   Endpoint
     { runEndpoint :: Input -> EndpointResult m a
-    , toString    :: String
+    , toString    :: Text
     }
 ```
 
@@ -21,6 +21,7 @@ in `Input` and either matches with some output `m a` or doesn't match the reques
 data EndpointResult (m :: * -> *) a
   = Matched
       { matchedReminder :: Input
+      , matchedTrace    :: Trace
       , matchedOutput   :: m (Output a)
       }
   | NotMatched
@@ -109,3 +110,8 @@ nameEndpoint = get(param @Text "name") ~> (\name -> return $ created ("Name: " `
 ```
 
 Strictly speaking, `~>` operator is just an inverted alias of `mapOutputM` function.
+
+# Related topics
+- [Matching a request](02-request-match.html)
+- [Encode & Decode](04-encode-decode.html)
+- [Run Endpoint](06-run-endpoint.html)

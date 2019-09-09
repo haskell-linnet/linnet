@@ -18,6 +18,8 @@ import           Control.Monad.Catch          (MonadCatch, MonadThrow)
 import           Control.Monad.Fail           (MonadFail)
 import           Control.Monad.IO.Class       (MonadIO)
 import           Control.Monad.Reader         (MonadReader (..), ReaderT (..))
+import           Control.Monad.Trans          (lift)
+import           Control.Monad.Writer.Lazy    (WriterT)
 import           Data.ByteString              (ByteString)
 import qualified Data.CaseInsensitive         as CI
 import           Data.Function                ((&))
@@ -32,7 +34,7 @@ import           Network.Wai                  (Application, Request (..),
 instance Encode TextPlain SomeException where
   encode _ = mempty
 
-type Middleware m = ReaderT Request m Response -> ReaderT Request m Response
+type Middleware m = Compiled m -> Compiled m
 
 auth :: (MonadReader (RequestEnv m) m) => Middleware m
 auth downstream =
@@ -40,13 +42,13 @@ auth downstream =
     (\req ->
        case lookup (CI.mk "Authorization") $ requestHeaders req of
          Just "secret" -> local (authorizedEnv "secret") (runReaderT downstream req)
-         _ -> pure $ responseLBS unauthorized401 [] mempty)
+         _ -> (pure . pure) $ responseLBS unauthorized401 [] mempty)
 
 logging :: (WithLog env Message m) => Middleware m
 logging downstream =
   ReaderT
     (\req -> do
-       logInfo $ pack ("Request: " <> show req)
+       lift $ logInfo $ pack ("Request: " <> show req)
        runReaderT downstream req)
 
 helloWorld :: (MonadReader (RequestEnv m) m, MonadCatch m, MonadFail m) => Endpoint m Text

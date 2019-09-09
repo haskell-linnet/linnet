@@ -29,6 +29,7 @@ dependencies:
   - uri-encode
   - mtl
   - http-media
+  - time
 
 library:
   source-dirs: src

@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Linnet.Endpoints.Methods
   ( get
   , post
@@ -10,6 +12,7 @@ module Linnet.Endpoints.Methods
   , options
   ) where
 
+import           Data.Text          (append, pack)
 import           Linnet.Endpoint
 import           Linnet.Input
 import           Network.HTTP.Types
@@ -24,9 +27,9 @@ methodEndpoint method underlying =
            in if (requestMethod . request) input == method
                 then result
                 else case result of
-                       Matched _ _ -> NotMatched (MethodNotAllowed method)
-                       skipped     -> skipped
-    , toString = show method ++ " " ++ toString underlying
+                       Matched {} -> NotMatched (MethodNotAllowed method)
+                       skipped    -> skipped
+    , toString = pack (show method) `append` " " `append` toString underlying
     }
 
 -- | Turn endpoint into one that matches only for GET requests
