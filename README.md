@@ -21,19 +21,26 @@ Here is an example of running simple application using Warp server:
 {-# LANGUAGE TypeSynonymInstances   #-}
 
 import Control.Exception (SomeException)
-import Data.Function ((&))
-import Data.Text (Text, append)
+import Data.Function     ((&))
+import Data.Text         (Text, append)
 import Linnet
+import Network.Wai       (Application)
 
--- It's necessary to define encoding of exceptions for content-type "text/plain". Here it returns no content
+-- Linnet makes no assumption on how to encode exceptions.
+-- It's necessary to define encoder of exceptions for used content-types.
+-- Here it returns no content
 instance Encode TextPlain SomeException where
- encode _ = mempty
+  encode _ = mempty
 
-helloWorld = get(p' "hello" // path @Text) ~>> (\name -> return $ ok ("Hello, " `append` name))
+helloName :: Endpoint IO Text
+helloName = get(p' "hello" // path @Text) ~>>
+               (\name -> return $ ok ("Hello, " `append` name))
+
+app :: Application
+app = bootstrap @TextPlain helloName & compile & toApp
 
 main :: IO ()
 main = run 9000 app
-       where app = bootstrap @TextPlain helloWorld & compile & toApp id
 ```
 
 Now try to call your application with:
