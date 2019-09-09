@@ -1,0 +1,617 @@
+<!DOCTYPE HTML><html><head><title>linnet - Matching a request</title><meta charset="utf-8"><meta content="summary" name="twitter:card"><meta content="https://s3-eu-west-1.amazonaws.com/worldwideapps/assets/tintin-hexcolor &quot;#007c99&quot;.png" name="twitter:site"><meta content="linnet - Matching a request" name="twitter:title"><meta content="Lightweight library for building HTTP API" name="twitter:description"><meta content="Sergey Kolbasov" name="twitter:creator"><meta content="https://s3-eu-west-1.amazonaws.com/worldwideapps/assets/tintin-hexcolor &quot;#007c99&quot;.png" name="twitter:image"><meta itemprop="og:type" content="website"><meta itemprop="og:site_name" content="theam"><meta itemprop="og:title" content="linnet - Matching a request"><meta itemprop="og:url" content="haskell-linnet/linnet"><meta itemprop="og:image" content="https://s3-eu-west-1.amazonaws.com/worldwideapps/assets/tintin-hexcolor &quot;#007c99&quot;.png"><meta itemprop="og:description" content="Lightweight library for building HTTP API"><link href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans|Montserrat:500" rel="stylesheet"><link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet"><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/tomorrow-night.min.css" rel="stylesheet"><link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css" rel="stylesheet"><link href="https://s3-eu-west-1.amazonaws.com/worldwideapps/assets/favicon-custom.ico" rel="shortcut icon"><link href="https://cdn.jsdelivr.net/npm/katex@0.10.0-alpha/dist/katex.min.css" rel="stylesheet"><style>
+html
+{
+  height     : 100%;
+  min-height : 100%;
+}
+
+body
+{
+  height      : 100%;
+  min-height  : 100%;
+  font-family : "IBM+Plex+Sans", sans-serif;
+  font-size   : 1em;
+  overflow-x  : hidden;
+}
+
+body a
+{
+  color : rgba(76,163,183,77.0);
+}
+
+body a:hover
+{
+  color : rgba(25,137,163,26.0);
+}
+
+h1
+{
+  font-family : "Montserrat", sans-serif;
+  font-weight : 500;
+  font-size   : 1em;
+}
+
+h2
+{
+  font-family : "Montserrat", sans-serif;
+  font-weight : 500;
+  font-size   : 2.44099em;
+}
+
+h3
+{
+  font-family : "Montserrat", sans-serif;
+  font-weight : 500;
+  font-size   : 5.95848em;
+}
+
+h1
+{
+  font-size : 2.44099em;
+}
+
+h2
+{
+  font-size : 1.953em;
+}
+
+h3
+{
+  font-size : 1.56299em;
+}
+
+blockquote
+{
+  border-left  : solid 4px #dddddd;
+  padding-left : 1rem;
+  color        : #777777;
+}
+
+.next-prev
+{
+  margin-top    : 5%;
+  margin-bottom : 5%;
+}
+
+#header-container
+{
+  margin-top    : 5rem;
+  margin-bottom : 5rem;
+  text-align    : center;
+}
+
+#header-container img
+{
+  max-height : 7rem;
+}
+
+.cover-heading
+{
+  font-size     : 800%;
+  margin-bottom : 1.56299rem;
+}
+
+.cover-container
+{
+  background-color : #007c99;
+}
+
+.watermark
+{
+  position    : absolute;
+  top         : 0px;
+  left        : 0px;
+  max-height  : 1.25039rem;
+  margin-top  : 1.25039rem;
+  margin-left : 1.25039rem;
+}
+
+.cover-heading-subtitle
+{
+  margin-top : 3rem;
+  font-size  : 1.953rem;
+  color      : #ffffff;
+}
+
+.vertical-auto
+{
+  margin-top    : auto;
+  margin-bottom : auto;
+}
+
+.content
+{
+  margin-top    : 5%;
+  margin-bottom : 5%;
+}
+
+#wrapper
+{
+  padding-left       : 0px;
+  -webkit-transition : all 0.5s ease 0.0s;
+  -moz-transition    : all 0.5s ease 0.0s;
+  -ms-transition     : all 0.5s ease 0.0s;
+  -o-transition      : all 0.5s ease 0.0s;
+  transition         : all 0.5s ease 0.0s;
+}
+
+#wrapper.toggled
+{
+  padding-left : 250px;
+}
+
+#wrapper.toggled #sidebar-wrapper
+{
+  width : 250px;
+}
+
+#page-content-wrapper#wrapper.toggled
+{
+  position     : absolute;
+  margin-right : -250px;
+}
+
+#page-content-wrapper
+{
+  width      : 100%;
+  position   : absolute;
+  margin-top : 3rem;
+  padding    : 15px 15px 15px 15px;
+}
+
+#page-content-wrapper img
+{
+  max-width : 100%;
+}
+
+#sidebar-wrapper
+{
+  z-index            : 1000;
+  position           : fixed;
+  left               : 250px;
+  width              : 0px;
+  margin-left        : -250px;
+  overflow-y         : hidden;
+  overflow-x         : hidden;
+  -webkit-transition : all 0.5s ease 0.0s;
+  -moz-transition    : all 0.5s ease 0.0s;
+  -ms-transition     : all 0.5s ease 0.0s;
+  -o-transition      : all 0.5s ease 0.0s;
+  transition         : all 0.5s ease 0.0s;
+}
+
+.sidebar-nav
+{
+  position        : absolute;
+  top             : 0px;
+  width           : 250px;
+  margin          : 0px 0px 0px 0px;
+  padding         : 0px 0px 0px 0px;
+  list-style-type : none;
+}
+
+.sidebar-nav li
+{
+  text-indent : 20px;
+  line-height : 40px;
+}
+
+.sidebar-nav li a
+{
+  display         : block;
+  text-decoration : none;
+  font-weight     : bold;
+  color           : rgba(216,235,239,216.0);
+}
+
+.sidebar-nav li a:hover
+{
+  text-decoration : none;
+  color           : rgba(242,248,249,242.0);
+}
+
+.sidebar-nav li .tintin-fg-active
+{
+  color : #ffffff;
+}
+
+#menu-toggle
+{
+  position : absolute;
+}
+
+#menu-toggle img
+{
+  position : absolute;
+  left     : 0px;
+}
+
+#menu-toggle .rotateIn
+{
+  z-index : 999;
+}
+
+.tintin-doc-topbar
+{
+  height : 3rem;
+}
+
+.tintin-doc-topbar a
+{
+  margin-left : 1rem;
+  margin-top  : 0rem;
+  width       : 1.5rem;
+}
+
+.filter-gray
+{
+  position     : relative;
+  bottom       : 3px;
+  margin-left  : 0.25rem;
+  margin-right : 1rem;
+  height       : 1rem;
+}
+
+.footer-theam
+{
+  position    : relative;
+  bottom      : 1px;
+  margin-left : -0.25rem;
+  height      : 1.75rem;
+}
+
+.tintin-doc-footer
+{
+  bottom : 0px;
+  height : -15rem;
+  width  : 100%;
+  color  : rgba(0,0,0,0.3);
+}
+
+.main-container
+{
+  min-height : 100%;
+  position   : relative;
+}
+
+#content
+{
+  min-height : 95%;
+}
+
+.sidebar-nav > .sidebar-brand
+{
+  height         : 3rem;
+  font-size      : 2rem;
+  font-family    : "Montserrat", sans-serif;
+  font-weight    : 500;
+  padding-top    : 2.5rem;
+  padding-bottom : 2.5rem;
+  margin-bottom  : 1.5rem;
+}
+
+.sidebar-nav > .sidebar-brand img
+{
+  height : 1.5rem;
+}
+
+.tintin-navbar
+{
+  font-weight      : bold;
+  background-color : rgba(51,150,173,51.0);
+}
+
+.tintin-navbar .left-part
+{
+  padding-left : 0px !important;
+}
+
+.tintin-navbar ul
+{
+  margin-top      : 1rem;
+  list-style-type : none;
+}
+
+.tintin-navbar ul li
+{
+  margin-right : 1rem;
+  display      : inline;
+}
+
+.tintin-navbar ul li a
+{
+  color : rgba(216,235,239,216.0);
+}
+
+.tintin-navbar ul li a:hover
+{
+  text-decoration : none;
+  color           : rgba(242,248,249,242.0);
+}
+
+
+.tintin-navbar .tintin-navbar-active a
+{
+  color : #ffffff;
+}
+
+.tintin-navbar .tintin-navbar-active a:hover
+{
+  text-decoration : none;
+  color           : rgba(204,204,204,51.0);
+}
+
+.tintin-bg-70
+{
+  background-color : rgba(51,150,173,51.0);
+}
+
+.tintin-bg-custom
+{
+  background-color : #007c99;
+}
+
+.tintin-fg-custom
+{
+  color : #007c99;
+}
+
+.tintin-fg-active
+{
+  color : #ffffff;
+}
+
+.tintin-fg-disabled
+{
+  color : #000000;
+}
+
+footer
+{
+  position         : relative;
+  bottom           : 0px;
+  left             : 0px;
+  width            : 100%;
+  padding-top      : 30px;
+  padding-bottom   : 30px;
+  color            : #ffffff;
+  background-color : rgba(51,150,173,51.0);
+  text-align       : center;
+}
+
+footer a
+{
+  color : rgba(153,202,214,153.0);
+}
+
+footer a:hover
+{
+  text-decoration : none;
+  color           : rgba(178,215,224,178.0);
+}
+
+footer .author
+{
+  margin-top : 1.19999em;
+  font-size  : 1.19999em;
+}
+
+footer .site-generated-message
+{
+  font-size     : 0.8em;
+  margin-top    : 3em;
+  margin-bottom : 3em;
+}
+
+.container
+{
+  max-width : 50rem;
+}
+
+@media screen and (min-width: 768px)
+{
+
+#wrapper
+{
+  padding-left : 0px;
+}
+
+#wrapper .toggled
+{
+  padding-left : 250px;
+}
+
+#wrapper .toggled #sidebar-wrapper
+{
+  width : 250px;
+}
+
+#wrapper .toggled #page-content-wrapper
+{
+  position     : relative;
+  margin-right : 0px;
+}
+
+#sidebar-wrapper
+{
+  width : 0px;
+}
+
+#page-content-wrapper
+{
+  padding  : 20px 20px 20px 20px;
+  position : relative;
+}
+
+}
+
+/* Generated with Clay, http://fvisser.nl/clay */</style></head><body class="h-100 tintin-fg-black tintin-bg-white"><div id="main-container" class="h-100"><section id="content"><div id="wrapper" class="toggled"><div id="sidebar-wrapper" class="h-100 tintin-bg-custom"><div class="h-100 tintin-bg-70"><p></p></div><ul class="sidebar-nav"><li class="sidebar-brand d-flex tintin-bg-custom"><a href="index.html" class="align-self-center tintin-fg-white">linnet</a></li><li><a href="01-endpoint.html" class="tintin-fg-disabled">Endpoint</a></li><li><a href="02-request-match.html" class="tintin-fg-active">Matching a request</a></li><li><a href="03-output.html" class="tintin-fg-disabled">Output</a></li><li><a href="04-encode-decode.html" class="tintin-fg-disabled">Encode &amp; Decode</a></li><li><a href="05-error-handling.html" class="tintin-fg-disabled">Error Handling</a></li><li><a href="06-run-endpoint.html" class="tintin-fg-disabled">Run Endpoint</a></li><li><a href="07-json.html" class="tintin-fg-disabled">Working with JSON</a></li><li><a href="08-streaming.html" class="tintin-fg-disabled">Streaming</a></li><li><a href="09-tracing.html" class="tintin-fg-disabled">Endpoint Tracing</a></li></ul></div><nav class="navbar navbar-expand-lg tintin-doc-topbar tintin-fg-white"><a href="#menu-toggle" id="menu-toggle" class><img src="https://s3-eu-west-1.amazonaws.com/worldwideapps/assets/menu.png" class="img-fluid animated rotateOut"><img src="https://s3-eu-west-1.amazonaws.com/worldwideapps/assets/close.png" class="img-fluid animated rotateIn"></a></nav><div id="page-content-wrapper"><div class="container"><div class="col"><div class="animated fadeIn"><h1>Matching a request</h1>
+<p>Linnet provides plenty of functions &amp; endpoints for request matching to
+combine together with help of <code>(//)</code> and <code>(|+|)</code> operators.</p>
+<h2>Methods matching</h2>
+<p>Following functions are available for matching against request HTTP method.<br />
+In case of method mismatch, resulting endpoint always returns <code>NotMatched</code>:</p>
+<pre class="haskell"><code>{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE OverloadedStrings      #-}
+{-# LANGUAGE TypeApplications       #-}
+{-# LANGUAGE TypeSynonymInstances   #-}
+
+
+import qualified Data.ByteString            as BS
+import qualified Data.ByteString.Lazy       as BL
+import           Data.Text
+import           Data.List.NonEmpty
+import           Linnet
+import           Linnet.Endpoint            (root)
+import           Network.Wai
+
+getEndpoint :: Endpoint IO Request
+getEndpoint = get(root)
+
+postEndpoint :: Endpoint IO Request
+postEndpoint = post(root)
+
+putEndpoint :: Endpoint IO Request
+putEndpoint = put(root)
+
+patchEndpoint :: Endpoint IO Request
+patchEndpoint = patch(root)
+
+deleteEndpoint :: Endpoint IO Request
+deleteEndpoint = delete(root)
+
+-- etc
+</code></pre>
+<p>Check out <code>Methods</code> module API for more functions</p>
+<h2>Paths</h2>
+<p>Matching of request&#39;s path is vital part of routing logic. Usually, path endpoints are combined
+together using product <code>(//)</code> operator:</p>
+<p><strong>Constant segment</strong></p>
+<p><code>pathConst</code> or <code>p&#39;</code> alias allows to match a single segment of request against predefined constant:</p>
+<pre class="haskell"><code>boolConstEndpoint :: Endpoint IO Bool
+boolConstEndpoint = get(p&#39; &quot;foo&quot; // p&#39; &quot;bar&quot;) ~&gt;&gt; (return $ ok True)
+</code></pre>
+<p>Mind that <code>{-# LANGUAGE OverloadedStrings #-}</code> extension should be enabled.</p>
+<p><strong>Variable segment</strong></p>
+<p><code>path</code> endpoint decodes a single segment of request path that is represented as value of resulting endpoint:</p>
+<pre class="haskell"><code>pathVariableEndpoint :: Endpoint IO Int
+pathVariableEndpoint = (* 2) &lt;$&gt; get(path @Int)
+</code></pre>
+<p>Here <code>{-# LANGUAGE TypeApplications #-}</code> pragma adds the support of <code>@Type</code> syntax to explicitly declare expected type.</p>
+<p><strong>Consume all segments</strong></p>
+<p>Endpoint <code>paths</code> consumes the reminder of input&#39;s path and always matches the request as far as types match:</p>
+<pre class="haskell"><code>pathsEndpoint :: Endpoint IO [Int]
+pathsEndpoint = (fmap (* 2)) &lt;$&gt; get(paths @Int)
+</code></pre>
+<p>Again, <code>TypeApplications</code> should be enabled.</p>
+<p><strong>Empty path</strong></p>
+<p><code>pathEmpty</code> matches iff the reminder path is empty. Could be handy to match root requests with empty path:</p>
+<pre class="haskell"><code>rootRequest :: Endpoint IO ()
+rootRequest = get(pathEmpty) ~&gt;&gt; (return $ ok ())
+</code></pre>
+<h2>Params</h2>
+<p>Linnet provides set of endpoints for extracting query parameters from the request. As their type is still <code>Endpoint m a</code>,
+it&#39;s usual to combine them together with other endpoints using sequential combination of <code>(//)</code>.</p>
+<blockquote>
+<p><strong>Notice</strong><br />
+All the endpoints for extracting query parameters below <em>always match</em> the request but might raise an error in context of <code>m</code> monad, therefore
+require <code>MonadThrow</code> constraint.</p>
+</blockquote>
+<p><strong>Single required parameter</strong></p>
+<p><code>param</code> endpoint extracts and decode value from request query part:</p>
+<pre class="haskell"><code>paramEndpoint :: Endpoint IO Int
+paramEndpoint = get(param @Int &quot;paramName&quot;)
+</code></pre>
+<p>Again, <code>{-# LANGUAGE OverloadedStrings #-}</code> extension should be enabled.<br />
+In case if parameter is missing or malformed, <code>LinnetError</code> is be thrown in context of <code>m</code>.</p>
+<p><strong>Single optional parameter</strong></p>
+<pre class="haskell"><code>paramMaybeEndpoint :: Endpoint IO (Maybe Int)
+paramMaybeEndpoint = get(paramMaybe @Int &quot;paramName&quot;)
+</code></pre>
+<p>In case if parameter is missing, <code>Nothing</code> is returned. Throws an exception on malformed value.</p>
+<p><strong>List of values</strong></p>
+<p><code>params</code> endpoint retrieves list of values of <strong>repeating</strong> parameters:</p>
+<pre class="haskell"><code>paramsEndpoint :: Endpoint IO [Int]
+paramsEndpoint = get(params @Int &quot;paramName&quot;)
+</code></pre>
+<p>In case if parameter is missing, empty list is returned. Throws an exception on malformed value.</p>
+<p><strong>Non-empty list of values</strong></p>
+<p><code>paramsNel</code> is similar to <code>params</code> endpoint but throws an exception in case of missing parameter:</p>
+<pre class="haskell"><code>paramsNelEndpoint :: Endpoint IO (NonEmpty Int)
+paramsNelEndpoint = get(paramsNel @Int &quot;paramName&quot;)
+</code></pre>
+<h2>Headers</h2>
+<p>Just as in case of params, headers are composable with the rest of the endpoints using operators <code>(//)</code> or <code>(|+|)</code>.
+In Linnet, everything is <code>Endpoint</code>.</p>
+<blockquote>
+<p><strong>Notice</strong><br />
+All the endpoints for extracting headers below <em>always match</em> the request but might raise an error in context of <code>m</code> monad, therefore
+require <code>MonadThrow</code> constraint.</p>
+</blockquote>
+<p><strong>Required header extraction</strong></p>
+<p><code>header</code> allows to extract and decode value of specific request header:</p>
+<pre class="haskell"><code>headerEndpoint :: Endpoint IO Text
+headerEndpoint = get(header @Text &quot;My-Header&quot;)
+</code></pre>
+<p><code>{-# LANGUAGE OverloadedStrings #-}</code> extension should be enabled.<br />
+In case if header is missing or malformed, <code>LinnetError</code> is be thrown in context of <code>m</code>.</p>
+<p><strong>Optional header extraction</strong></p>
+<pre class="haskell"><code>headerMaybeEndpoint :: Endpoint IO (Maybe Text)
+headerMaybeEndpoint = get(headerMaybe @Text &quot;My-Header&quot;)
+</code></pre>
+<p>In case if header is missing, <code>Nothing</code> is returned. Throws an exception on malformed value.</p>
+<h2>Bodies</h2>
+<p>Body endpoints take a special treatment in Linnet ecosystem. There are multiple key features:</p>
+<ul>
+<li>All <code>body*</code> endpoints have <code>Decode ct a</code> constraint that is used to decode request body of Content-Type <code>ct</code>
+into the specific value of type <code>a</code></li>
+<li>All <code>body*</code> endpoints require non-chunked request with predetermined <code>Content-Length</code> size, otherwise they might <em>not
+match</em> the request</li>
+</ul>
+<pre class="haskell"><code>-- Example of Decode instance for text/plain Content-Type and strict ByteString type
+instance Decode TextPlain BS.ByteString where
+    decode = Right . BL.toStrict
+</code></pre>
+<p><strong>Decoding request body</strong></p>
+<pre class="haskell"><code>bodyEndpoint :: Endpoint IO BS.ByteString
+bodyEndpoint = post(body @TextPlain @BS.ByteString)
+</code></pre>
+<ul>
+<li>In case if <code>Content-Length</code> of request is being chunked or missing, endpoint isn&#39;t <em>matched</em>.</li>
+<li>In case if <code>Content-Length</code> is 0, <code>LinnetError</code> is raised.</li>
+<li>In case if <code>Decode</code> can&#39;t decode a malformed body of a request, <code>LinnetError</code> is raised.</li>
+</ul>
+<p><strong>Decoding optional body</strong></p>
+<pre class="haskell"><code>bodyMaybeEndpoint :: Endpoint IO (Maybe BS.ByteString)
+bodyMaybeEndpoint = post(bodyMaybe @TextPlain @BS.ByteString)
+</code></pre>
+<ul>
+<li>In case if <code>Content-Length</code> of request is being chunked or missing, endpoint isn&#39;t <em>matched</em>.</li>
+<li>In case if <code>Content-Length</code> is 0, <code>Nothing</code> is returned</li>
+<li>In case if <code>Decode</code> can&#39;t decode a malformed body of a request, <code>LinnetError</code> is raised.</li>
+</ul>
+<p>Linnet also exposes couple of useful aliases to avoid type application for <code>Content-Type</code> every time:</p>
+<pre class="haskell"><code>jsonBody @a      == body @ApplicationJson @a
+jsonBodyMaybe @a == bodyMaybe @ApplicationJson @a
+textBody @a      == body @TextPlain @a
+textBodyMaybe @a == bodyMaybe @TextPlain @a
+</code></pre>
+<h2>Cookies</h2>
+<p>In case of cookies, similar to <code>headers*</code> endpoints are available:</p>
+<p><strong>Extract cookie</strong></p>
+<pre class="haskell"><code>cookieEndpoint :: Endpoint IO Int
+cookieEndpoint = get(cookie @Int &quot;cookieName&quot;)
+</code></pre>
+<p><strong>Extract optional cookie</strong></p>
+<pre class="haskell"><code>cookieMaybeEndpoint :: Endpoint IO (Maybe Int)
+cookieMaybeEndpoint = get(cookieMaybe @Int &quot;cookieName&quot;)
+</code></pre>
+<p>Mind that <code>cookieName</code> is case-sensitive.</p>
+<h1>Related topics</h1>
+<ul>
+<li><a href="01-endpoint.html">Endpoint</a></li>
+<li><a href="07-json.html">Working with JSON</a></li>
+<li><a href="08-streaming.html">Streaming</a></li>
+</ul>
+</div></div></div></div></div></section><div class="tintin-doc-footer clear-fix"><div class="row next-prev"><div class="col-md-4 offset-md-4"><a href="01-endpoint.html">&lt; Previous: Endpoint</a></div><div class="col-md-4 ml-auto"><a href="03-output.html">Next: Output &gt;</a></div></div><footer><div class="container"><div class="row"><div class="col"><p class="author">Developed by <span>Sergey Kolbasov</span></p><p class="site-generated-message">Site generated with <a href="https://theam.github.io/tintin" class="tintin-logo"><img src="https://s3-eu-west-1.amazonaws.com/worldwideapps/assets/logo.svg" class="filter-gray"></a><span>&mdash; &copy; 2019 </span><a href="https://www.theagilemonkeys.com">The Agile Monkeys</a></p></div></div></div></footer></div></div><script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script><script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/haskell.min.js"></script><script src="https://cdn.rawgit.com/icons8/bower-webicon/v0.10.7/jquery-webicon.min.js"></script><script>hljs.initHighlightingOnLoad()</script><script>$(function () {$("#menu-toggle").click(function(e) {e.preventDefault();$("#wrapper").toggleClass("toggled");$("#menu-toggle img").toggleClass("rotateIn rotateOut");})});</script><script src="https://cdn.jsdelivr.net/npm/katex@0.10.0-alpha/dist/katex.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.9.0/contrib/auto-render.min.js"></script><script>renderMathInElement(document.body);</script></body></html>
