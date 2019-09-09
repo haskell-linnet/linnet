@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Linnet.Endpoints.Cookies
@@ -9,6 +10,8 @@ module Linnet.Endpoints.Cookies
 import           Control.Monad.Catch     (MonadThrow, throwM)
 import qualified Data.ByteString         as B
 import qualified Data.ByteString.Char8   as C8
+import           Data.Text               (append)
+import qualified Data.Text.Encoding      as TE
 import           Linnet.Decode
 import           Linnet.Endpoint
 import           Linnet.Endpoints.Entity
@@ -50,8 +53,8 @@ cookie name =
                       Left err -> throwM err
                       Right v  -> return $ ok v
                   _ -> throwM $ MissingEntity entity
-           in Matched {matchedReminder = input, matchedOutput = output}
-    , toString = "cookie " ++ C8.unpack name
+           in Matched {matchedReminder = input, matchedTrace = [], matchedOutput = output}
+    , toString = "cookie " `append` TE.decodeUtf8 name
     }
   where
     entity = Cookie name
@@ -76,8 +79,8 @@ cookieMaybe name =
                       Left err -> throwM err
                       Right v  -> return $ ok (Just v)
                   _ -> return $ ok Nothing
-           in Matched {matchedReminder = input, matchedOutput = output}
-    , toString = "cookieMaybe " ++ C8.unpack name
+           in Matched {matchedReminder = input, matchedTrace = [], matchedOutput = output}
+    , toString = "cookieMaybe " `append` TE.decodeUtf8 name
     }
   where
     entity = Header name

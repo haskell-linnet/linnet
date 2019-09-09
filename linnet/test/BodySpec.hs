@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -18,6 +19,7 @@ import           Debug.Trace                (trace)
 import           EntityEndpointLaws
 import           Instances
 import           Linnet
+import           Linnet.Endpoint            (EndpointResult (..))
 import           Linnet.Endpoints.Entity
 import           Linnet.Errors
 import           Linnet.Input
@@ -75,3 +77,10 @@ spec = do
     let e = textBodyMaybe @Foo @IO
     result <- resultOutputEither (runEndpoint e withEmptyBody)
     result `shouldBe` (Right $ Just $ ok Nothing)
+  it "returns no trace" $
+    property $ \(foo :: Foo) ->
+      monadicIO $ do
+        let e = textBody @Foo @IO
+        mvar <- liftIO $ newMVar (show foo)
+        let Matched {..} = runEndpoint e (withBody mvar)
+        assert $ null matchedTrace

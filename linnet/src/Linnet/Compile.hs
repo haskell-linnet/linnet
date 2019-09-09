@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeOperators         #-}
@@ -15,16 +16,21 @@
 
 module Linnet.Compile
   ( Compile(..)
+  , Compiled
   ) where
 
 import           Control.Exception         (SomeException)
 import           Control.Monad             (join, (>=>))
-import           Control.Monad.Catch       (MonadCatch)
+import           Control.Monad.Catch       (MonadCatch, catchAll)
 import           Control.Monad.Reader      (ReaderT (..))
+import           Control.Monad.Trans       (lift)
+import           Control.Monad.Writer.Lazy (WriterT (..))
 import           Data.ByteString           (intercalate)
 import           Data.ByteString.Char8     (split)
 import           Data.Maybe                (maybeToList)
-import           Linnet.Endpoint
+import           Linnet.Endpoint           (Endpoint (..), EndpointResult (..),
+                                            NotMatchedReason (..), Trace,
+                                            handle)
 import           Linnet.Errors             (LinnetError)
 import           Linnet.Input
 import           Linnet.Internal.Coproduct
@@ -44,26 +50,26 @@ newtype CompileContext =
     { allowedMethods :: [Method]
     }
 
+-- | Type alias for 'ReaderT' with 'WriterT' @Trace@ inside to support endpoints tracing
+type Compiled m = ReaderT Request (WriterT Trace m) (Either SomeException Response)
+
 class Compile cts m es where
-  compile :: es -> ReaderT Request m Response
+  -- | Compile 'Endpoint's into one 'Compiled' ReaderT for further composition and final conversion to WAI 'Application'
+  compile :: es -> Compiled m
+  compile es = compileWithContext @cts es (CompileContext [])
+  compileWithContext :: es -> CompileContext -> Compiled m
 
-instance (Compile' cts m es) => Compile cts m es where
-  compile es = compile' @cts es (CompileContext [])
-
-class Compile' cts m es where
-  compile' :: es -> CompileContext -> ReaderT Request m Response
-
-instance (Monad m) => Compile' CNil m (HList '[]) where
-  compile' _ CompileContext {..} =
+instance (Monad m) => Compile CNil m (HList '[]) where
+  compileWithContext _ CompileContext {..} =
     ReaderT $
     const
       (if null allowedMethods
-         then notFoundResponse
-         else methodNotAllowedResponse allowedMethods)
+         then lift $ Right <$> notFoundResponse
+         else lift $ Right <$> methodNotAllowedResponse allowedMethods)
 
-instance (Negotiable ct a, Negotiable ct SomeException, Negotiable ct (), Compile' cts m (HList es), MonadCatch m) =>
-         Compile' (ct :+: cts) m (HList (Endpoint m a ': es)) where
-  compile' (ea ::: es) ctx@CompileContext {..} =
+instance (Negotiable ct a, Negotiable ct SomeException, Negotiable ct (), Compile cts m (HList es), MonadCatch m) =>
+         Compile (ct :+: cts) m (HList (Endpoint m a ': es)) where
+  compileWithContext ((ea :: Endpoint m a) ::: es) ctx@CompileContext {..} =
     ReaderT
       (\req ->
          let accept =
@@ -71,18 +77,23 @@ instance (Negotiable ct a, Negotiable ct SomeException, Negotiable ct (), Compil
                requestHeaders $
                req
           in case runEndpoint (handle respond400 ea) (inputFromRequest req) of
-               Matched _ mo ->
-                 outputToResponse
-                   (negotiate @ct accept Nothing)
-                   (negotiate @ct accept Nothing)
-                   (negotiate @ct accept Nothing) <$>
-                 mo
+               Matched {..} ->
+                 WriterT $
+                 (, matchedTrace) <$>
+                 catchAll
+                   (Right .
+                    outputToResponse
+                      (negotiate @ct accept Nothing)
+                      (negotiate @ct accept Nothing)
+                      (negotiate @ct accept Nothing) <$>
+                    matchedOutput)
+                   (pure . Left)
                NotMatched r ->
                  let newContext =
                        case r of
                          MethodNotAllowed allowed -> ctx {allowedMethods = allowed : allowedMethods}
                          Other -> ctx
-                  in runReaderT (compile' @cts es newContext) req)
+                  in runReaderT (compileWithContext @cts es newContext) req)
 
 notFoundResponse :: (Applicative m) => m Response
 notFoundResponse = pure $ responseLBS notFound404 [] mempty

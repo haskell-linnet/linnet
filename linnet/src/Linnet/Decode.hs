@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DefaultSignatures     #-}
 {-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE KindSignatures        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE UndecidableInstances  #-}
@@ -21,7 +20,6 @@ import           Data.Either.Combinators
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as TE
 import           Data.Text.Read             (decimal, double, rational, signed)
-import           GHC.Base                   (Symbol)
 import           Linnet.Endpoints.Entity    (Entity)
 import           Linnet.Errors
 

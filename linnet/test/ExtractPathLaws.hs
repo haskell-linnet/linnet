@@ -7,14 +7,15 @@ module ExtractPathLaws
   ( extractPathLaws
   ) where
 
-import           Data.Data               (Typeable)
+import           Data.Data               (Proxy (..), Typeable, typeRep)
 import           Data.Function           ((&))
 import           Data.Functor.Identity   (Identity (..))
 import           Data.Maybe              (isNothing, maybeToList)
+import           Data.Text               (pack)
 import           Instances
 import           Linnet
 import           Linnet.Decode
-import           Linnet.Endpoint         (maybeReminder)
+import           Linnet.Endpoint         (maybeReminder, maybeTrace)
 import           Linnet.Input            (Input (..))
 import           Test.QuickCheck         (Arbitrary, property)
 import           Test.QuickCheck.Classes (Laws (..))
@@ -32,7 +33,9 @@ extractPathLaws = Laws "ExtractPath" properties
         let result = runEndpoint one i
             v = (headOption . reminder) i >>= decodePath @a
          in resultValueUnsafe result == Identity v &&
-            (isNothing v || maybeReminder result == Just i {reminder = (tail . reminder) i})
+            (isNothing v ||
+             (maybeReminder result == Just i {reminder = (tail . reminder) i} &&
+              maybeTrace result == Just [pack $ show (typeRep (Proxy :: Proxy a))]))
     extractTail =
       property $ \(i :: Input) ->
         let result = runEndpoint tail' i

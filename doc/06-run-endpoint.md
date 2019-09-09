@@ -15,12 +15,14 @@ application and run the server. Module `Linnet.Bootstrap` contains set of functi
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE OverloadedStrings      #-}
 {-# LANGUAGE TypeApplications       #-}
+{-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE TypeSynonymInstances   #-}
 
 import Control.Exception (SomeException)
 import Data.Function     ((&))
 import Data.Text
 import Linnet
+import Linnet.Internal.Coproduct ((:+:))
 import Network.Wai
 
 instance Encode TextPlain SomeException where
@@ -42,9 +44,9 @@ main = run 9000 app
 Here is what happened in the code above:
 * Defined endpoint was "bootsrapped" for Content-Type `@Text/Plain`. Result of this
 endpoint will be encoded with `Encode TextPlain`
-* `Bootstrap` was "compiled" into `ReaderT Request m Response`. It could be useful to take a break
-here to add some middleware filters without leaving context of monad `m` by transforming compiled `ReaderT`.
-* `ReaderT Request m Response` was transformed to WAI application and run on Warp server
+* `Bootstrap` was "compiled" into `ReaderT (WriterT Trace m) Request (Either SomeException Response)` or `Compiled m` for shortness.
+It could be useful to take a break here to add some middleware filters without leaving context of monad `m` by transforming compiled `ReaderT`.
+* `Compiled m` was transformed to WAI application and run on Warp server
 
 ## Serving multiple Content-Types
 
@@ -68,15 +70,44 @@ multipleContentTypesApp =
   toApp
 ```
 
+## Content-Type negotiation
+
+It's also possible to serve different Content-Types depending on client's `Accept` header as it's described in
+[RFC 2295](https://tools.ietf.org/html/rfc2295): 
+
+```haskell
+contentTypeNegotiationApp :: Application
+contentTypeNegotiationApp =
+  bootstrap @(TextPlain :+: ApplicationJson) endpoint & compile & toApp
+```
+
+Based on the client request and `Accept` header values, Linnet picks the best matching encoder.
+Important to mention that in the example above `application/json` content would be returned in case of
+failed negotiation.
+
+If there is a need to enable 406 error signaling failed negotiation instead of falling back to the last option,
+`NotAcceptable406` comes in handy:
+
+```haskell
+negotiateOr406App :: Application
+negotiateOr406App =
+  bootstrap @(TextPlain :+: ApplicationJson :+: NotAcceptable406) endpoint & compile & toApp
+```
+
 ## Custom monad
 
 Last step of converting `Endpoint` into `Application` is to call function `toApp` that has a following signature:
 
 ```haskell
-toApp :: (NaturalTransformation m IO) => ReaderT Request m Response -> Application
+toApp :: (NaturalTransformation m IO) => Compiled m -> Application
 ```
 
 The constraint exposed is a natural transformation `m ~> IO` to "run" custom monad as `IO`.
-It allows to use custom monad until the very end of request resolution and could be useful to run logger,
+It allows to use this monad until the very end of request resolution and could be useful to run logger,
 create request-local context etc.  
 [This example](https://github.com/haskell-linnet/linnet/blob/master/examples/src/Examples/Middleware.hs) demonstrates how to make it work.
+
+# Related topics
+- [Endpoint](01-endpoint.html)
+- [Matching a request](02-request-match.html)
+- [Endpoint Tracing](09-tracing.html)

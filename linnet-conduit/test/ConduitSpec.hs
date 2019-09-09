@@ -55,7 +55,7 @@ spec =
                       inputFromRequest $
                       defaultRequest {requestBodyLength = ChunkedBody, requestBody = atomicModifyIORef ref getChunk}
                 let endpoint = streamBody @IO ~> (\stream -> ok <$> runConduit (stream .| sinkList))
-                let (Matched _ mOut) = runEndpoint endpoint streamed
+                let (Matched _ _ mOut) = runEndpoint endpoint streamed
                 output <- liftIO mOut
                 assert $ output == ok (map BL.fromStrict nonEmpty)
     describe "ToResponse conduit" $ do

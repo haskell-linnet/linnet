@@ -51,3 +51,7 @@ class Decode (ct :: Symbol) a where
 
 And again, Content-Type of expected request is encoded as phantom type `ct` to ensure that correct decoder exists in
 compile-time.
+
+# Related topics
+- [Output](03-output.html)
+- [Run Endpoint](06-run-endpoint.html)

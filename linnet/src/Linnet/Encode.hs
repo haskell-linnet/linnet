@@ -1,7 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes   #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE KindSignatures        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module Linnet.Encode
@@ -16,7 +15,6 @@ import           Data.Text                  as TS
 import           Data.Text.Encoding         as TSE
 import           Data.Text.Lazy             as TL
 import           Data.Text.Lazy.Encoding    as TLE
-import           GHC.Base                   (Symbol)
 import           Linnet.ContentTypes
 
 -- | Encoding of some type @a@ into payload of HTTP response

@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE RecordWildCards      #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
@@ -11,8 +12,10 @@ module Linnet.Endpoint
   ( EndpointResult(..)
   , Endpoint(..)
   , NotMatchedReason(..)
+  , Trace
   , isMatched
   , maybeReminder
+  , maybeTrace
   , lift
   , liftOutputM
   , mapM'
@@ -35,6 +38,7 @@ module Linnet.Endpoint
 import           Control.Applicative       (Alternative (..))
 import           Control.Exception         (Exception, SomeException)
 import qualified Control.Monad.Catch       as MC
+import           Data.Text                 (Text, append, unpack)
 import           GHC.Base                  (liftA2)
 import           Linnet.Errors             (LinnetError (..))
 import           Linnet.Input
@@ -60,11 +64,14 @@ infixl 2 |+|
 data EndpointResult (m :: * -> *) a
   = Matched
       { matchedReminder :: Input
+      , matchedTrace    :: [Text]
       , matchedOutput   :: m (Output a)
       }
   | NotMatched
       { reason :: NotMatchedReason
       }
+
+type Trace = [Text]
 
 data NotMatchedReason
   = MethodNotAllowed
@@ -74,19 +81,25 @@ data NotMatchedReason
   deriving (Show, Eq)
 
 isMatched :: EndpointResult m a -> Bool
-isMatched (Matched _ _) = True
-isMatched _             = False
+isMatched Matched {} = True
+isMatched _          = False
 
+-- | Return reminder of 'EndpointResult' if it was matched
 maybeReminder :: EndpointResult m a -> Maybe Input
-maybeReminder (Matched r _) = Just r
-maybeReminder _             = Nothing
+maybeReminder Matched {..} = Just matchedReminder
+maybeReminder _            = Nothing
+
+-- | Return trace of 'EndpointResult' if it was matched
+maybeTrace :: EndpointResult m a -> Maybe Trace
+maybeTrace Matched {..} = Just matchedTrace
+maybeTrace _            = Nothing
 
 instance (Show (m (Output a))) => Show (EndpointResult m a) where
-  show (Matched _ out) = "EndpointResult.Matched(" ++ show out ++ ")"
-  show (NotMatched r)  = "EndpointResult.NotMatched(" ++ show r ++ ")"
+  show (Matched _ _ out) = "EndpointResult.Matched(" ++ show out ++ ")"
+  show (NotMatched r)    = "EndpointResult.NotMatched(" ++ show r ++ ")"
 
 instance (Functor m) => Functor (EndpointResult m) where
-  fmap f (Matched r m)  = Matched r $ (fmap . fmap) f m
+  fmap f matched@Matched {..} = matched {matchedOutput = (fmap . fmap) f matchedOutput}
   fmap _ (NotMatched r) = NotMatched r
 
 -- | Basic Linnet data type that abstracts away operations over HTTP communication.
@@ -119,21 +132,21 @@ instance (Functor m) => Functor (EndpointResult m) where
 -- An endpoint might be converted into WAI @Application@ using 'Linnet.Bootstrap.bootstrap' and @\@TypeApplications@ language pragma:
 --
 -- > main = run 9000 app
--- >        where app = bootstrap @TextPlain usersApi & compile & toApp id
+-- >        where app = bootstrap @TextPlain usersApi & compile & toApp @IO
 data Endpoint (m :: * -> *) a =
   Endpoint
     { runEndpoint :: Input -> EndpointResult m a
-    , toString    :: String
+    , toString    :: Text
     }
 
 instance Show (Endpoint m a) where
-  show e = "Endpoint(" ++ toString e ++ ")"
+  show Endpoint {..} = "Endpoint(" ++ unpack toString ++ ")"
 
 instance (Functor m) => Functor (Endpoint m) where
   fmap f e = Endpoint {runEndpoint = fmap f . runEndpoint e, toString = toString e}
 
 instance (MC.MonadCatch m) => Applicative (Endpoint m) where
-  pure a = Endpoint {runEndpoint = \i -> Matched i $ pure (ok a), toString = "const"}
+  pure a = Endpoint {runEndpoint = \i -> Matched i [] $ pure (ok a), toString = "const"}
   liftA2 fn fa fb = productWith fa fb fn
 
 instance (MC.MonadCatch m) => Alternative (Endpoint m) where
@@ -143,15 +156,15 @@ instance (MC.MonadCatch m) => Alternative (Endpoint m) where
       { runEndpoint =
           \input ->
             case runEndpoint ea input of
-              a@(Matched remA _) ->
+              a@(Matched remA _ _) ->
                 case runEndpoint eb input of
-                  b@(Matched remB _) ->
+                  b@(Matched remB _ _) ->
                     if length (reminder remA) <= length (reminder remB)
                       then a
                       else b
                   NotMatched _ -> a
               NotMatched _ -> runEndpoint eb input
-      , toString = toString ea ++ "<|>" ++ toString eb
+      , toString = toString ea `append` "<|>" `append` toString eb
       }
 
 -- | Map over the 'Output' of endpoint with function returning new value @a@ lifted in monad @m@
@@ -169,8 +182,8 @@ mapOutputM fn ea =
     { runEndpoint =
         \input ->
           case runEndpoint ea input of
-            Matched remA ma -> Matched remA $ ma >>= transformM fn
-            NotMatched r    -> NotMatched r
+            matched@Matched {..} -> matched {matchedOutput = matchedOutput >>= transformM fn}
+            NotMatched r -> NotMatched r
     }
 
 transformOutput :: (m (Output a) -> m (Output b)) -> Endpoint m a -> Endpoint m b
@@ -179,8 +192,8 @@ transformOutput fn ea =
     { runEndpoint =
         \input ->
           case runEndpoint ea input of
-            Matched remA ma -> Matched remA $ fn ma
-            NotMatched r    -> NotMatched r
+            matched@Matched {..} -> matched {matchedOutput = fn matchedOutput}
+            NotMatched r -> NotMatched r
     }
 
 transform :: (Monad m) => (m a -> m b) -> Endpoint m a -> Endpoint m b
@@ -189,7 +202,7 @@ transform fn ea =
     { runEndpoint =
         \input ->
           case runEndpoint ea input of
-            Matched remA ma -> Matched {matchedReminder = remA, matchedOutput = ma >>= traverse (fn . pure)}
+            matched@Matched {..} -> matched {matchedOutput = matchedOutput >>= traverse (fn . pure)}
             NotMatched r -> NotMatched r
     }
 
@@ -211,7 +224,7 @@ try ea =
               traverseEither (Left e)    = ok $ Left e
               traverseEither (Right out) = Right <$> out
            in case runEndpoint ea input of
-                Matched remA out -> Matched {matchedReminder = remA, matchedOutput = traverseEither <$> MC.try out}
+                matched@Matched {..} -> matched {matchedOutput = traverseEither <$> MC.try matchedOutput}
                 NotMatched r -> NotMatched r
     }
 
@@ -227,11 +240,11 @@ try ea =
 
 -- | Lift monadic value @m a@ into 'Endpoint' that always matches
 lift :: (Functor m) => m a -> Endpoint m a
-lift m = Endpoint {runEndpoint = \i -> Matched i $ fmap ok m, toString = "lift"}
+lift m = Endpoint {runEndpoint = \i -> Matched i [] $ fmap ok m, toString = "lift"}
 
 -- | Lift monadic output @m (Output a)@ into 'Endpoint' that always matches
 liftOutputM :: m (Output a) -> Endpoint m a
-liftOutputM m = Endpoint {runEndpoint = \i -> Matched i m, toString = "liftOutputM"}
+liftOutputM m = Endpoint {runEndpoint = \i -> Matched i [] m, toString = "liftOutputM"}
 
 -- | Create product of two 'Endpoint's that sequentially match a request.
 -- | If some of endpoints doesn't match a request, the final result is also non-matching
@@ -246,14 +259,14 @@ productWith ea eb f =
     { runEndpoint =
         \req ->
           case runEndpoint ea req of
-            Matched aRem aOutM ->
+            Matched aRem trcA aOutM ->
               case runEndpoint eb aRem of
-                Matched bRem bOutM ->
+                Matched bRem trcB bOutM ->
                   let out = do
                         oa <- MC.try aOutM
                         ob <- MC.try bOutM
                         product_ oa ob
-                   in Matched bRem out
+                   in Matched bRem (trcA ++ trcB) out
                 NotMatched r -> NotMatched r
             NotMatched r -> NotMatched r
     }
@@ -272,7 +285,7 @@ productWith ea eb f =
 (//) ea eb =
   Endpoint
     { runEndpoint = runEndpoint $ productWith ea eb (\a b -> adjoin (a ::: b ::: HNil))
-    , toString = toString ea ++ " // " ++ toString eb
+    , toString = toString ea `append` " // " `append` toString eb
     }
 
 -- | Create new 'Endpoint' of two endpoints, adjoining values into 'Coproduct'
@@ -297,7 +310,8 @@ productWith ea eb f =
 root :: (Applicative m) => Endpoint m Request
 root =
   Endpoint
-    { runEndpoint = \input -> Matched {matchedReminder = input, matchedOutput = pure . ok $ request input}
+    { runEndpoint =
+        \input -> Matched {matchedReminder = input, matchedTrace = [], matchedOutput = pure . ok $ request input}
     , toString = "root"
     }
 
@@ -305,4 +319,6 @@ root =
 zero :: (Applicative m) => Endpoint m (HList '[])
 zero =
   Endpoint
-    {runEndpoint = \input -> Matched {matchedReminder = input, matchedOutput = pure . ok $ HNil}, toString = "zero"}
+    { runEndpoint = \input -> Matched {matchedReminder = input, matchedTrace = [], matchedOutput = pure . ok $ HNil}
+    , toString = "zero"
+    }

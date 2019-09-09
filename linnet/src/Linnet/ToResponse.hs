@@ -19,12 +19,11 @@ import qualified Data.ByteString.Char8 as C8
 import qualified Data.ByteString.Lazy as BL
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy(..))
-import GHC.Base (Symbol)
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import Linnet.Encode (Encode(..))
 import Linnet.Internal.Coproduct ((:+:), CNil, Coproduct(..))
-import Network.HTTP.Media (MediaType, Quality, (//), matchQuality, matches)
-import Network.HTTP.Types (Header, Status, hContentType, notAcceptable406, status200, status404)
+import Network.HTTP.Media (MediaType, Quality, (//), matchQuality)
+import Network.HTTP.Types (Header, Status, hContentType, notAcceptable406, status404)
 import Network.Wai (Response, responseLBS)
 
 -- | Type-class to convert a value of type @a@ into Response with Content-Type of @ct@
@@ -96,7 +95,7 @@ instance (KnownSymbol c, ToResponse (Proxy c) a, Negotiable t a) =>
             [p, s] = C8.split '/' value
             mt = p // s
             bestMatchExists = do
-              (bestMatchMediaType, fn) <- bestMatch
+              (bestMatchMediaType, _) <- bestMatch
               match <- matchQuality [bestMatchMediaType, mt] mediaType
               if match == bestMatchMediaType
                 then pure $ negotiate @t mediaType bestMatch

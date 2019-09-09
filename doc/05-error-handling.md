@@ -20,12 +20,14 @@ in case of exception inside of monad `m (Output a)`:
 {-# LANGUAGE TypeApplications      #-}
 
 import           Control.Monad.Reader
-import qualified Control.Monad.Catch  as Catch
-import           Control.Exception    (Exception, SomeException)
-import           Data.Function        ((&))
+import qualified Control.Monad.Catch       as Catch
+import           Control.Exception         (Exception, SomeException)
+import           Data.Function             ((&))
+import           Data.Functor              ((<&>))
 import           Linnet
 import           Linnet.Endpoint
 import           Linnet.ToResponse
+import           Network.HTTP.Types.Status (internalServerError500)
 import           Network.Wai
 
 data TestException = TestException deriving (Show, Eq)
@@ -51,22 +53,29 @@ triedEndpoint = failedEndpoint & try @TestException
 in compile-time to render errors. **The catch is that it's used ONLY for rendering failed `Output`!** That's it, only
 errors that are encapsulated inside of `Output.ErrorPayload` are rendered that way.
 
-If it happens that monad `m` wasn't handled anyhow, exception is propagated to the server and the only thing that
+If it happens that monad `m` wasn't handled anyhow, exception is stored in the `Left` part of `Compiled m` result.
+In case if it's not handled afterwards, it's propagated to the server and the only thing that
 client would probably get is the empty Internal Server Error page.
 
-One possible solution to render _all_ errors is to set up middleware that handles errors in context of `m` and
+One possible solution to render _all_ errors is to set up middleware that handles errors in context of `Compiled m` and
 returns a response. It's even possible to re-use instance `ToResponse ct SomeException` for that: 
 
 ```haskell top
 instance Encode ct SomeException where
     encode _ = "Wow, so exception"
 
-compiled :: ReaderT Request IO Response
+compiled :: Compiled IO
 compiled = bootstrap @TextPlain failedEndpoint & compile
 
--- catch all the errors inside of ReaderT and feed them into `toResponse` of `ToResponse` type class
-handled = compiled & Catch.handleAll (return . toResponse @TextPlain)
+-- the "failed" Either of ReaderT is fed into `toResponse` of `ToResponse` type class
+-- thanks to `MonadCatch (Exception SomeException)` instance
+handled :: Compiled IO
+handled = compiled <&> Catch.handleAll (Right . (toResponse @TextPlain internalServerError500 []))
 
 -- now compile it into WAI application
 app = toApp handled
 ```
+
+# Related topics
+- [Endpoint](01-endpoint.html)
+- [Run Endpoint](06-run-endpoint.html)

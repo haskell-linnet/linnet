@@ -84,6 +84,7 @@ module Linnet
   , serviceUnavailable
   , gatewayTimeout
   -- * Compiling an endpoint
+  , Compiled
   , bootstrap
   , serve
   , compile
@@ -100,6 +101,7 @@ module Linnet
   ) where
 
 import           Linnet.Bootstrap
+import           Linnet.Compile            (Compiled)
 import           Linnet.ContentTypes
 import           Linnet.Decode
 import           Linnet.Encode

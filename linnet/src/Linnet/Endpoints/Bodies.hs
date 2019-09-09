@@ -50,10 +50,12 @@ body =
         \input ->
           case (requestBodyLength . request) input of
             ChunkedBody -> NotMatched Other
-            KnownLength 0 -> Matched {matchedReminder = input, matchedOutput = throwM $ MissingEntity Body}
+            KnownLength 0 ->
+              Matched {matchedReminder = input, matchedTrace = [], matchedOutput = throwM $ MissingEntity Body}
             KnownLength _ ->
               Matched
                 { matchedReminder = input
+                , matchedTrace = []
                 , matchedOutput = (liftIO . strictRequestBody . request) input >>= decodeBody @ct @a
                 }
     , toString = "body"
@@ -72,10 +74,11 @@ bodyMaybe =
         \input ->
           case (requestBodyLength . request) input of
             ChunkedBody -> NotMatched Other
-            KnownLength 0 -> Matched {matchedReminder = input, matchedOutput = pure $ ok Nothing}
+            KnownLength 0 -> Matched {matchedReminder = input, matchedTrace = [], matchedOutput = pure $ ok Nothing}
             KnownLength _ ->
               Matched
                 { matchedReminder = input
+                , matchedTrace = []
                 , matchedOutput =
                     (fmap . fmap) Just ((liftIO . strictRequestBody . request) input >>= decodeBody @ct @a)
                 }

@@ -63,6 +63,7 @@ streamBody =
                 ChunkedBody ->
                   Matched
                     { matchedReminder = input
+                    , matchedTrace = []
                     , matchedOutput =
                         do liftIO $ pauseTimeout req
                            pure $ ok $ (fromLazyBody . lazyRequestBody) req

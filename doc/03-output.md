@@ -46,3 +46,6 @@ responseOutput = ok(responseLBS status404 [] mempty)
 ```
 
 Mind that response status is overridden with `Output` status.
+
+# Related topics
+- [Endpoint](01-endpoint.html)

@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Linnet.Endpoints.Headers
@@ -7,8 +8,9 @@ module Linnet.Endpoints.Headers
 
 import           Control.Monad.Catch     (MonadThrow, throwM)
 import qualified Data.ByteString         as B
-import qualified Data.ByteString.Char8   as C8
 import qualified Data.CaseInsensitive    as CI
+import           Data.Text               (append)
+import qualified Data.Text.Encoding      as TE
 import           Linnet.Decode
 import           Linnet.Endpoint
 import           Linnet.Endpoints.Entity
@@ -41,8 +43,8 @@ header name =
                       Left err -> throwM err
                       Right v  -> return $ ok v
                   _ -> throwM $ MissingEntity entity
-           in Matched {matchedReminder = input, matchedOutput = output}
-    , toString = "header " ++ C8.unpack name
+           in Matched {matchedReminder = input, matchedTrace = [], matchedOutput = output}
+    , toString = "header " `append` TE.decodeUtf8 name
     }
   where
     entity = Header name
@@ -67,8 +69,8 @@ headerMaybe name =
                       Left err -> throwM err
                       Right v  -> return $ ok (Just v)
                   _ -> return $ ok Nothing
-           in Matched {matchedReminder = input, matchedOutput = output}
-    , toString = "headerMaybe " ++ C8.unpack name
+           in Matched {matchedReminder = input, matchedTrace = [], matchedOutput = output}
+    , toString = "headerMaybe " `append` TE.decodeUtf8 name
     }
   where
     entity = Header name
