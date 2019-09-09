@@ -1,5 +1,5 @@
 name:                linnet-conduit
-version:             0.3.0.0
+version:             0.4.0.0
 github:              haskell-linnet/linnet
 license:             Apache
 author:              Sergey Kolbasov
