@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE DeriveGeneric        #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE OverloadedStrings    #-}
 {-# LANGUAGE RecordWildCards      #-}
@@ -40,6 +41,7 @@ import           Control.Exception         (Exception, SomeException)
 import qualified Control.Monad.Catch       as MC
 import           Data.Text                 (Text, append, unpack)
 import           GHC.Base                  (liftA2)
+import           GHC.Generics              (Generic)
 import           Linnet.Errors             (LinnetError (..))
 import           Linnet.Input
 import           Linnet.Internal.Coproduct
@@ -70,6 +72,7 @@ data EndpointResult (m :: * -> *) a
   | NotMatched
       { reason :: NotMatchedReason
       }
+  deriving (Generic)
 
 type Trace = [Text]
 

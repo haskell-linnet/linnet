@@ -1,0 +1,10 @@
+resolver: lts-14.5
+
+packages:
+- .
+
+extra-deps:
+  - ../linnet
+  - ../linnet-aeson
+
+pvp-bounds: lower

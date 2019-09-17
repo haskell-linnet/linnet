@@ -1,12 +1,12 @@
-name:                linnet
-version:             0.4.0.1
+name:                linnet-benchmarks
+version:             0.4.0.0
 github:              haskell-linnet/linnet
 license:             Apache
 author:              Sergey Kolbasov
 maintainer:          whoisliar@gmail.com
 copyright:           2019 Sergey Kolbasov
 category:            linnet
-synopsis:            Lightweight library for building HTTP API
+synopsis:            Linnet benchmarks
 
 extra-source-files:
   - README.md
@@ -30,21 +30,17 @@ dependencies:
   - mtl
   - http-media
   - time
+  - criterion
+  - linnet >= 0.4.0.1
+  - linnet-aeson
+  - aeson
+  - deepseq
+  - random
 
-library:
-  source-dirs: src
-
-tests:
-  linnet-test:
-    main:                Spec.hs
-    source-dirs:         test
+benchmarks:
+  linnet-benchmarks:
+    main:                Benchmarks.hs
+    source-dirs:         benchmarks
     ghc-options:
+      - -O2
       - -threaded
-      - -rtsopts
-      - -with-rtsopts=-N
-    dependencies:
-      - linnet
-      - hspec
-      - QuickCheck
-      - quickcheck-instances
-      - quickcheck-classes
