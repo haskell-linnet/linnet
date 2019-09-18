@@ -189,7 +189,7 @@ mapOutputM fn ea =
             NotMatched r -> NotMatched r
     }
 
-transformOutput :: (m (Output a) -> m (Output b)) -> Endpoint m a -> Endpoint m b
+transformOutput :: (m (Output a) -> k (Output b)) -> Endpoint m a -> Endpoint k b
 transformOutput fn ea =
   ea
     { runEndpoint =
