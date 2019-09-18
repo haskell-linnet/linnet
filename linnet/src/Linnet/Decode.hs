@@ -20,6 +20,7 @@ import           Data.Either.Combinators
 import qualified Data.Text                  as T
 import qualified Data.Text.Encoding         as TE
 import           Data.Text.Read             (decimal, double, rational, signed)
+import           Linnet.ContentTypes        (TextPlain)
 import           Linnet.Endpoints.Entity    (Entity)
 import           Linnet.Errors
 
@@ -28,6 +29,12 @@ import           Linnet.Errors
 -- by looking for specific @Decode@ instance.
 class Decode ct a where
   decode :: BL.ByteString -> Either LinnetError a
+
+instance Decode TextPlain BL.ByteString where
+  decode = Right
+
+instance Decode TextPlain B.ByteString where
+  decode = Right . BL.toStrict
 
 class DecodePath a where
   decodePath :: T.Text -> Maybe a
